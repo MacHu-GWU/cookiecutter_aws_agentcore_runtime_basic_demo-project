@@ -1,0 +1,6 @@
+// Copy to config/config-shared.json5. Values here are placeholders; only the shape matters.
+// Settings shared by every environment. Overridden by config-<env>.json5.
+{
+  // Every AWS resource name derives from this, such as the stack name prefix.
+  project_name: "my_project",
+}

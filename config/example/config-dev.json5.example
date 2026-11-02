@@ -1,0 +1,8 @@
+// Copy to config/config-dev.json5 (same for tst / prd). Values here are placeholders.
+// Settings of one environment; overrides config-shared.json5.
+{
+  // The region this environment deploys to; aws_account_id is in the -secret file.
+  aws_region: "us-east-1",
+  // Log level of this environment, stored in an SSM parameter by the alerts stack.
+  log_level: "DEBUG",
+}

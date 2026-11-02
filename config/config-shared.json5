@@ -1,0 +1,6 @@
+// Settings shared by every environment. Overridden by config-<env>.json5.
+// Shape and docs of every file: config/example/. Fields: Config in config_00_main.py.
+{
+  // Every AWS resource name derives from this, such as the stack name prefix.
+  project_name: "cookiecutter_aws_agentcore_runtime_basic_demo",
+}

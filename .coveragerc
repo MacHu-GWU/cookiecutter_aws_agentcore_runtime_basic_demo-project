@@ -1,0 +1,33 @@
+# Coverage.py is a tool for measuring code coverage of Python programs.
+# for more info: https://coverage.readthedocs.io/en/latest/config.html
+[run]
+omit =
+    cookiecutter_aws_agentcore_runtime_basic_demo/docs/*
+    cookiecutter_aws_agentcore_runtime_basic_demo/tests/*
+    cookiecutter_aws_agentcore_runtime_basic_demo/vendor/*
+    cookiecutter_aws_agentcore_runtime_basic_demo/cli.py
+    cookiecutter_aws_agentcore_runtime_basic_demo/paths.py
+    cookiecutter_aws_agentcore_runtime_basic_demo/env.py
+    cookiecutter_aws_agentcore_runtime_basic_demo/runtime.py
+    # only testable against a deployed stack, see tests_int/
+    cookiecutter_aws_agentcore_runtime_basic_demo/cdk/stacks/*_stack_exports.py
+    # dev tooling; tests/cdk/test_cdk_mise_tasks.py only checks mise.toml is current
+    cookiecutter_aws_agentcore_runtime_basic_demo/cdk/mise_tasks.py
+
+[report]
+# Regexes for lines to exclude from consideration
+exclude_lines =
+    # Have to re-enable the standard pragma
+    pragma: no cover
+
+    # Don't complain about missing debug-only code:
+    def __repr__
+    if self\.debug
+
+    # Don't complain if tests don't hit defensive assertion code:
+    raise AssertionError
+    raise NotImplementedError
+
+    # Don't complain if non-runnable code isn't run:
+    if 0:
+    if __name__ == .__main__.:
