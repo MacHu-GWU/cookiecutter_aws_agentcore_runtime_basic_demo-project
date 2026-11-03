@@ -12,6 +12,7 @@ For the project's general AWS and CDK conventions (config, environments, boto se
 For a question, read only the file that covers it.
 
 - **AgentCore Docs Through MCP** (`references/01-agentcore-docs-mcp.md`): Read before answering any AgentCore question, or when the AgentCore doc tools are missing.
+- **Runtime Sessions and Cold Starts** (`references/02-runtime-sessions-and-cold-starts.md`): Read when an invocation is slow, when writing a client that invokes a runtime, or when an agent connects to an MCP server on AgentCore Runtime.
 
 ## Invokers
 
