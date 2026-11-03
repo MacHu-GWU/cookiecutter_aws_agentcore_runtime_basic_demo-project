@@ -3,4 +3,7 @@
 {
   // Every AWS resource name derives from this, such as the stack name prefix.
   project_name: "cookiecutter_aws_agentcore_runtime_basic_demo",
+  // The AgentCore CLI project name: a letter, then letters and digits, at most 23 characters.
+  // Every AgentCore resource name starts with it, such as AcRtDemo_dev_PowerPlantMcp.
+  agentcore_project_name: "AcRtDemo",
 }

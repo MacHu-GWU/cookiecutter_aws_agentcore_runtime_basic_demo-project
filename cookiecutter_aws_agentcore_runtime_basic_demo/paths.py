@@ -40,6 +40,15 @@ class PathEnum:
     path_cdk_app_py = dir_cdk / "cdk_app.py"
     dir_cdk_out = dir_cdk / "cdk.out"
 
+    # AgentCore CLI project, see the agentcore_project subpackage
+    dir_agentcore = dir_project_root / "agentcore"
+    path_agentcore_json = dir_agentcore / "agentcore.json"
+    path_aws_targets_json = dir_agentcore / "aws-targets.json"
+    path_agentcore_cdk_stack_ts = dir_agentcore / "cdk" / "lib" / "cdk-stack.ts"
+    dir_agentcore_app = (
+        dir_project_root / "app"
+    )  # one codeLocation per runtime, assembled
+
     # Virtual Environment
     dir_venv = dir_project_root / ".venv"
     dir_venv_bin = dir_venv / "bin"

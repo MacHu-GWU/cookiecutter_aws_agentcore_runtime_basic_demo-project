@@ -100,6 +100,23 @@ class ConfigNameMixin:
         """
         return self.get_cft_stack_url(self.cft_stack_name_publisher)
 
+    @cached_property
+    def cft_stack_name_agentcore(self: Config) -> str:
+        """
+        Name of the stack the AgentCore CLI deploys from ``agentcore/``, such as
+        ``AgentCore-MyProject-dev``. The CLI's CDK app names it
+        ``AgentCore-<project>-<target>``, with ``_`` turned into ``-``.
+        """
+        name = f"AgentCore-{self.agentcore_project_name}-{self.agentcore_target_name}"
+        return name.replace("_", "-")
+
+    @cached_property
+    def cft_stack_url_agentcore(self: Config) -> str:
+        """
+        Console URL of :attr:`cft_stack_name_agentcore`.
+        """
+        return self.get_cft_stack_url(self.cft_stack_name_agentcore)
+
     # --------------------------------------------------------------------------
     # CloudFormation exports, read by other projects through *_stack_exports.py
     # --------------------------------------------------------------------------
@@ -214,3 +231,65 @@ class ConfigNameMixin:
         ARN of :attr:`ssm_param_name_alert_topic_arn`.
         """
         return self.get_ssm_param_arn(self.ssm_param_name_alert_topic_arn)
+
+    # --------------------------------------------------------------------------
+    # AgentCore (the agentcore/ project, deployed by the AgentCore CLI)
+    # --------------------------------------------------------------------------
+    @cached_property
+    def agentcore_target_name(self: Config) -> str:
+        """
+        The AgentCore CLI deployment target of this environment, named after it,
+        such as ``dev``. The CLI puts the target in every physical name, so
+        every AgentCore resource name contains the environment.
+        """
+        return self.env_name
+
+    def get_agentcore_runtime_physical_name(self: Config, name: str) -> str:
+        """
+        The name AWS knows a runtime by, ``<project>_<target>_<name>``, such as
+        ``MyProject_dev_PowerPlantMcp``; ``name`` is its name in ``agentcore.json``.
+
+        :raises ValueError: if longer than the 48 characters AgentCore allows.
+        """
+        target = self.agentcore_target_name.replace("-", "_")
+        physical_name = f"{self.agentcore_project_name}_{target}_{name}"
+        if len(physical_name) > 48:
+            raise ValueError(
+                f"runtime name {physical_name!r} is longer than 48 characters, "
+                "shorten agentcore_project_name or the runtime name"
+            )
+        return physical_name
+
+    @cached_property
+    def agentcore_runtime_name_power_plant_mcp(self: Config) -> str:
+        """
+        Name of the MCP server runtime in ``agentcore.json``, ``PowerPlantMcp``.
+        """
+        return "PowerPlantMcp"
+
+    @cached_property
+    def agentcore_runtime_physical_name_power_plant_mcp(self: Config) -> str:
+        """
+        Physical name of :attr:`agentcore_runtime_name_power_plant_mcp`,
+        such as ``MyProject_dev_PowerPlantMcp``.
+        """
+        return self.get_agentcore_runtime_physical_name(
+            self.agentcore_runtime_name_power_plant_mcp
+        )
+
+    @cached_property
+    def agentcore_runtime_name_site_agent(self: Config) -> str:
+        """
+        Name of the agent runtime in ``agentcore.json``, ``SiteAgent``.
+        """
+        return "SiteAgent"
+
+    @cached_property
+    def agentcore_runtime_physical_name_site_agent(self: Config) -> str:
+        """
+        Physical name of :attr:`agentcore_runtime_name_site_agent`,
+        such as ``MyProject_dev_SiteAgent``.
+        """
+        return self.get_agentcore_runtime_physical_name(
+            self.agentcore_runtime_name_site_agent
+        )

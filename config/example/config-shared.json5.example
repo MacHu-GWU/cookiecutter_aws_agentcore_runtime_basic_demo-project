@@ -3,4 +3,6 @@
 {
   // Every AWS resource name derives from this, such as the stack name prefix.
   project_name: "my_project",
+  // The AgentCore CLI project name: a letter, then letters and digits, at most 23 characters.
+  agentcore_project_name: "MyProject",
 }

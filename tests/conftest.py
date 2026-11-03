@@ -50,4 +50,5 @@ def config() -> Config:
         aws_account_id="111122223333",
         aws_region="us-east-1",
         log_level="DEBUG",
+        agentcore_project_name="MyProject",
     )

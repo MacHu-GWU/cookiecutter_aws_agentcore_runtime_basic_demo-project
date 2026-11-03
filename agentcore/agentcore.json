@@ -1,0 +1,23 @@
+{
+  "name": "AcRtDemo",
+  "version": 2,
+  "managedBy": "CDK",
+  "runtimes": [
+    {
+      "name": "PowerPlantMcp",
+      "build": "CodeZip",
+      "entrypoint": "main.py",
+      "codeLocation": "app/PowerPlantMcp",
+      "runtimeVersion": "PYTHON_3_12",
+      "protocol": "MCP"
+    },
+    {
+      "name": "SiteAgent",
+      "build": "CodeZip",
+      "entrypoint": "main.py",
+      "codeLocation": "app/SiteAgent",
+      "runtimeVersion": "PYTHON_3_12",
+      "protocol": "HTTP"
+    }
+  ]
+}

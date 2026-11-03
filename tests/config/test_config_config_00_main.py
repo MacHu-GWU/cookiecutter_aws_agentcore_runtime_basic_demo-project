@@ -17,7 +17,7 @@ class TestConfig:
         Later files override earlier ones, and a missing secret file is skipped.
         """
         (tmp_path / "config-shared.json5").write_text(
-            '{project_name: "a", log_level: "shared"}'
+            '{project_name: "a", log_level: "shared", agentcore_project_name: "A"}'
         )
         (tmp_path / "config-dev.json5").write_text(
             "// comment\n{aws_account_id: '1', aws_region: 'r', log_level: 'dev'}"

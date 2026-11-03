@@ -104,6 +104,17 @@ curl -s -X POST http://localhost:8080/invocations -H 'Content-Type: application/
 echo
 """
 
+# AgentCore CLI project (agentcore/); every task deploys or builds ALL runtimes of the project
+[tasks.ac-gen]
+description = "🏗️ Generate agentcore/agentcore.json, agentcore/aws-targets.json, and app/<Runtime>/ from the config, uv.lock, and the package"
+run = ".venv/bin/python .mise/tasks/ac-gen.py"
+depends = ["inst"]
+
+[tasks.ac-build]
+description = "🏗️ Build every runtime's CodeZip and synth the AgentCore stack of each target (no AWS calls)"
+run = "agentcore build"
+depends = ["ac-gen"]
+
 # Documentation
 [tasks.build-doc]
 description = "📚 Build Sphinx documentation using sphinx-build (generates HTML in docs/build/html/)"

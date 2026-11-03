@@ -2,6 +2,8 @@
 
 from cookiecutter_aws_agentcore_runtime_basic_demo.config.config_01_name import ConfigNameMixin
 
+import pytest
+
 from cookiecutter_aws_agentcore_runtime_basic_demo.config.api import Config
 
 
@@ -37,7 +39,20 @@ def test_names(config: Config):
     assert config.ssm_param_name_alert_topic_arn == "/my-project-dev/alert-topic-arn"
     assert config.ssm_param_arn_alert_topic_arn == "arn:aws:ssm:us-east-1:111122223333:parameter/my-project-dev/alert-topic-arn"
     assert "/parameters/my-project-dev/alert-topic-arn/" in config.ssm_param_url_alert_topic_arn
+    # agentcore
+    assert config.cft_stack_name_agentcore == "AgentCore-MyProject-dev"
+    assert config.cft_stack_url_agentcore == "https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=AgentCore-MyProject-dev&filteringStatus=active&viewNested=true"
+    assert config.agentcore_target_name == "dev"
+    assert config.agentcore_runtime_name_power_plant_mcp == "PowerPlantMcp"
+    assert config.agentcore_runtime_physical_name_power_plant_mcp == "MyProject_dev_PowerPlantMcp"
+    assert config.agentcore_runtime_name_site_agent == "SiteAgent"
+    assert config.agentcore_runtime_physical_name_site_agent == "MyProject_dev_SiteAgent"
     # fmt: on
+
+
+def test_agentcore_runtime_physical_name_too_long(config: Config):
+    with pytest.raises(ValueError, match="longer than 48 characters"):
+        config.get_agentcore_runtime_physical_name("X" * 40)
 
 
 if __name__ == "__main__":

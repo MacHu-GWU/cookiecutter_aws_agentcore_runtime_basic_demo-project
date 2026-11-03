@@ -10,6 +10,7 @@ sub packages and modules
 .. toctree::
     :maxdepth: 1
 
+    agentcore_project <agentcore_project/__init__>
     cdk <cdk/__init__>
     config <config/__init__>
     one <one/__init__>
