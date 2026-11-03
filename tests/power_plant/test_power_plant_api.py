@@ -12,6 +12,11 @@ def test():
     _ = api.SiteTechnician
     _ = api.create_db_engine
     _ = api.load_seed_data
+    _ = api.SiteInfo
+    _ = api.AssetInfo
+    _ = api.TechnicianInfo
+    _ = api.SiteDetail
+    _ = api.TechnicianDetail
     _ = api.list_sites
     _ = api.list_assets
     _ = api.get_site

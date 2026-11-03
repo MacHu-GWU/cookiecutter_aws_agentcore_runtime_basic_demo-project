@@ -14,5 +14,6 @@ sub packages and modules
     data <data>
     orm <orm>
     queries <queries>
+    schemas <schemas>
     weather <weather>
     

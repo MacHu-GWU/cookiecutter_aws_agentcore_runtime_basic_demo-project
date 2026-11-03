@@ -16,6 +16,10 @@ from mcp.server.fastmcp import FastMCP
 
 from ..one.api import one
 from ..power_plant import queries
+from ..power_plant.schemas import SiteInfo
+from ..power_plant.schemas import AssetInfo
+from ..power_plant.schemas import SiteDetail
+from ..power_plant.schemas import TechnicianDetail
 
 #: The FastMCP server; each tool's description is the query function's docstring.
 mcp = FastMCP(
@@ -39,10 +43,11 @@ def _doc_from(func):
 
 
 # Each tool calls its query with one.engine. The tools do not take the engine, so
-# the LLM never sees it; their descriptions are the queries' docstrings.
+# the LLM never sees it; their descriptions are the queries' docstrings, and their
+# output schemas come from the Pydantic return types (power_plant/schemas.py).
 @mcp.tool()
 @_doc_from(queries.list_sites)
-def list_sites(kind: str | None = None) -> list[dict]:
+def list_sites(kind: str | None = None) -> list[SiteInfo]:
     return queries.list_sites(one.engine, kind=kind)
 
 
@@ -51,19 +56,19 @@ def list_sites(kind: str | None = None) -> list[dict]:
 def list_assets(
     site_id: str | None = None,
     kind: str | None = None,
-) -> list[dict]:
+) -> list[AssetInfo]:
     return queries.list_assets(one.engine, site_id=site_id, kind=kind)
 
 
 @mcp.tool()
 @_doc_from(queries.get_site)
-def get_site(site_id: str) -> dict:
+def get_site(site_id: str) -> SiteDetail:
     return queries.get_site(one.engine, site_id=site_id)
 
 
 @mcp.tool()
 @_doc_from(queries.get_technician)
-def get_technician(technician_id: str) -> dict:
+def get_technician(technician_id: str) -> TechnicianDetail:
     return queries.get_technician(one.engine, technician_id=technician_id)
 
 

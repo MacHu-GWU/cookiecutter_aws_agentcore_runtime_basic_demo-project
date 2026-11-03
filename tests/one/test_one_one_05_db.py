@@ -11,7 +11,7 @@ def test_engine():
     one = One()
     assert isinstance(one, OneDbMixin)
     assert one.engine.url.database == ":memory:"
-    assert get_site(one.engine, "S-03")["name"] == "Ridge Wind"
+    assert get_site(one.engine, "S-03").name == "Ridge Wind"
     assert one.engine is one.engine
 
 

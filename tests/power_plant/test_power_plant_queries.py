@@ -12,6 +12,14 @@ from cookiecutter_aws_agentcore_runtime_basic_demo.power_plant.queries import (
 import pytest
 import sqlalchemy as sa
 
+from cookiecutter_aws_agentcore_runtime_basic_demo.power_plant.schemas import SiteInfo
+from cookiecutter_aws_agentcore_runtime_basic_demo.power_plant.schemas import (
+    SiteDetail,
+)
+from cookiecutter_aws_agentcore_runtime_basic_demo.power_plant.schemas import (
+    TechnicianDetail,
+)
+
 from cookiecutter_aws_agentcore_runtime_basic_demo.power_plant.orm import (
     create_db_engine,
 )
@@ -28,16 +36,17 @@ def engine() -> sa.Engine:
 
 
 def test_list_sites(engine):
-    assert len(list_sites(engine)) == 5
-    assert list_sites(engine)[0] == {
-        "id": "S-01",
-        "name": "Sunrise Valley",
-        "kind": "solar",
-        "lat": 35.05,
-        "lon": -117.60,
-        "capacity_mw": 120,
-    }
-    assert [row["id"] for row in list_sites(engine, kind="wind")] == ["S-03", "S-04"]
+    sites = list_sites(engine)
+    assert len(sites) == 5
+    assert sites[0] == SiteInfo(
+        id="S-01",
+        name="Sunrise Valley",
+        kind="solar",
+        lat=35.05,
+        lon=-117.60,
+        capacity_mw=120,
+    )
+    assert [site.id for site in list_sites(engine, kind="wind")] == ["S-03", "S-04"]
     assert list_sites(engine, kind="hydro") == []
 
 
@@ -56,15 +65,17 @@ def test_list_assets(engine, site_id, kind, expected):
 
 def test_get_site(engine):
     site = get_site(engine, "S-03")
-    assert site["name"] == "Ridge Wind"
-    assert [row["id"] for row in site["assets"]] == ["A-06", "A-07", "A-08"]
-    assert [row["id"] for row in site["technicians"]] == ["T-02", "T-04"]
+    assert isinstance(site, SiteDetail)
+    assert site.name == "Ridge Wind"
+    assert [asset.id for asset in site.assets] == ["A-06", "A-07", "A-08"]
+    assert [technician.id for technician in site.technicians] == ["T-02", "T-04"]
 
 
 def test_get_technician(engine):
     technician = get_technician(engine, "T-01")
-    assert technician["name"] == "Alice Chen"
-    assert [row["id"] for row in technician["sites"]] == ["S-01", "S-02", "S-05"]
+    assert isinstance(technician, TechnicianDetail)
+    assert technician.name == "Alice Chen"
+    assert [site.id for site in technician.sites] == ["S-01", "S-02", "S-05"]
 
 
 def test_not_found(engine):

@@ -11,6 +11,11 @@ from .orm import Technician
 from .orm import SiteTechnician
 from .orm import create_db_engine
 from .orm import load_seed_data
+from .schemas import SiteInfo
+from .schemas import AssetInfo
+from .schemas import TechnicianInfo
+from .schemas import SiteDetail
+from .schemas import TechnicianDetail
 from .queries import list_sites
 from .queries import list_assets
 from .queries import get_site

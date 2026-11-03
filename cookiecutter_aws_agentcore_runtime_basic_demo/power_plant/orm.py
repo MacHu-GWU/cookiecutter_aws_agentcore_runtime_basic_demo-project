@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-The power plant database: SQLAlchemy models of the 4 tables, the engine, and the
-seed data load.
+The power plant database: SQLAlchemy models of the 4 tables, with their
+relationships, the engine, and the seed data load. What the queries return is
+not these models but those of
+:mod:`~cookiecutter_aws_agentcore_runtime_basic_demo.power_plant.schemas`.
 
 The demo runs on an in-memory SQLite database (``sqlite+pysqlite:///:memory:``),
 filled from :mod:`~cookiecutter_aws_agentcore_runtime_basic_demo.power_plant.data`
@@ -47,6 +49,11 @@ class Site(Base):
     capacity_mw: orm.Mapped[int] = orm.mapped_column(sa.Integer)
     # fmt: on
 
+    # fmt: off
+    assets: orm.Mapped[list[Asset]] = orm.relationship(back_populates="site", order_by="Asset.id")
+    technicians: orm.Mapped[list[Technician]] = orm.relationship(secondary="site_technicians", back_populates="sites", order_by="Technician.id")
+    # fmt: on
+
 
 class Asset(Base):
     """
@@ -62,6 +69,10 @@ class Asset(Base):
     model: orm.Mapped[str] = orm.mapped_column(sa.String)
     # fmt: on
 
+    # fmt: off
+    site: orm.Mapped[Site] = orm.relationship(back_populates="assets")
+    # fmt: on
+
 
 class Technician(Base):
     """
@@ -74,6 +85,10 @@ class Technician(Base):
     id: orm.Mapped[str] = orm.mapped_column(sa.String, primary_key=True)
     name: orm.Mapped[str] = orm.mapped_column(sa.String)
     skill: orm.Mapped[str] = orm.mapped_column(sa.String)
+    # fmt: on
+
+    # fmt: off
+    sites: orm.Mapped[list[Site]] = orm.relationship(secondary="site_technicians", back_populates="technicians", order_by="Site.id")
     # fmt: on
 
 

@@ -21,6 +21,8 @@ def test_list_tools():
         # the description is the query's docstring; the engine is not a parameter
         assert tool.description.strip() == getattr(queries, tool.name).__doc__.strip()
         assert "engine" not in tool.inputSchema["properties"]
+        # the output schema comes from the Pydantic return type
+        assert tool.outputSchema is not None
 
 
 @pytest.mark.parametrize(
@@ -32,23 +34,27 @@ def test_list_tools():
 )
 def test_call_list_tool(name, arguments, expected_ids):
     """
-    A list tool reaches its query through one.engine; FastMCP returns a list
-    result as structured output, ``{"result": [...]}``.
+    A list tool reaches its query through one.engine; FastMCP wraps a list
+    result in the structured output, ``{"result": [...]}``.
     """
     _, structured = asyncio.run(mcp.call_tool(name, arguments))
     assert [row["id"] for row in structured["result"]] == expected_ids
 
 
 def test_call_tool_get_technician():
-    content = asyncio.run(mcp.call_tool("get_technician", {"technician_id": "T-02"}))
-    technician = json.loads(content[0].text)
+    _, technician = asyncio.run(
+        mcp.call_tool("get_technician", {"technician_id": "T-02"})
+    )
     assert [row["id"] for row in technician["sites"]] == ["S-03"]
 
 
 def test_call_tool_get_site():
-    """A tool call goes through the MCP layer and returns the query result as JSON text."""
-    content = asyncio.run(mcp.call_tool("get_site", {"site_id": "S-03"}))
-    site = json.loads(content[0].text)
+    """
+    A tool call goes through the MCP layer and returns the model both as JSON
+    text (for clients that read only text) and as structured output.
+    """
+    content, site = asyncio.run(mcp.call_tool("get_site", {"site_id": "S-03"}))
+    assert json.loads(content[0].text) == site
     assert site["name"] == "Ridge Wind"
     assert len(site["technicians"]) == 2
 
