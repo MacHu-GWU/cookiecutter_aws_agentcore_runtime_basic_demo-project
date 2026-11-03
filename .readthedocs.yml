@@ -18,6 +18,6 @@ build:
       # Create the virtualenv with the dev Python from mise.toml ``[tools] python``
       - uv venv --python "$(python -c "import pathlib, sys, tomllib; print(tomllib.loads(pathlib.Path(sys.argv[1]).read_bytes().decode())[sys.argv[2]][sys.argv[3]])" mise.toml tools python)" "${READTHEDOCS_VIRTUALENV_PATH}"
     install:
-      # Install project with doc dependencies using uv
+      # Install project with doc dependencies using uv; the agentcore group so autodoc can import the runtime modules
       # UV_PROJECT_ENVIRONMENT tells uv to use ReadTheDocs venv instead of creating .venv
-      - UV_PROJECT_ENVIRONMENT="${READTHEDOCS_VIRTUALENV_PATH}" uv sync --extra doc
+      - UV_PROJECT_ENVIRONMENT="${READTHEDOCS_VIRTUALENV_PATH}" uv sync --extra doc --group agentcore

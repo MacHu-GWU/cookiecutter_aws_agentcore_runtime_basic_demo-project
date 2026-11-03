@@ -80,11 +80,12 @@ jobs:
       # Install project dependencies using uv (skip if cache hit)
       - name: "Install dependencies"
         if: steps.cache-venv.outputs.cache-hit != 'true'
-        run: uv sync --extra test
+        run: uv sync --extra test --group agentcore
       # Run pytest with coverage reporting. --extra test is a safety net: if uv ever has to rebuild
       # the .venv here, it installs the test extra too, so pytest is never missing.
+      # --group agentcore: the runtime modules import mcp and strands, and their tests need them.
       - name: "Run pytest"
-        run: "uv run --extra test pytest tests --cov=${{ env.PACKAGE_NAME }} --cov-report=xml --cov-report term-missing"
+        run: "uv run --extra test --group agentcore pytest tests --cov=${{ env.PACKAGE_NAME }} --cov-report=xml --cov-report term-missing"
       # Upload coverage report to Codecov
       # The 'if' condition checks if the current Python version should report coverage
       # For the first time setup, you should to goto codecov.io, enable your repo,

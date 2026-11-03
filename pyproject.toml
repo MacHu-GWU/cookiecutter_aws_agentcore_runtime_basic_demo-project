@@ -81,6 +81,18 @@ mise = [
     "httpx2>=2.13.1,<3.0.0", # Codecov and Read the Docs APIs
 ]
 
+# --- Dependency groups ---
+# Read: https://docs.astral.sh/uv/concepts/projects/dependencies/#dependency-groups
+[dependency-groups]
+
+# Code that runs inside the AgentCore Runtimes (MCP server, agent). One set for every runtime.
+# A group, not an extra, so ``uv export --only-group agentcore`` emits these (pinned by uv.lock)
+# without the base dependencies above, which stay on the dev machine (aws-cdk-lib and others).
+agentcore = [
+    "aws-opentelemetry-distro>=0.22.0,<1.0.0", # AgentCore observability; in the CLI templates
+    "mcp>=1.28.1,<2.0.0", # FastMCP server; bedrock-agentcore[strands-agents] needs mcp<2
+]
+
 [project.urls]
 Homepage = "https://github.com/MacHu-GWU/cookiecutter_aws_agentcore_runtime_basic_demo-project"
 Documentation = "https://cookiecutter-aws-agentcore-runtime-basic-demo.readthedocs.io/en/latest/"

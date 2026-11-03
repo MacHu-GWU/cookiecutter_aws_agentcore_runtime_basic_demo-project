@@ -37,7 +37,7 @@ run = "rm -r .venv"
 [tasks.inst]
 description = "💾 Install all Python dependencies using uv (syncs from pyproject.toml and uv.lock)"
 depends = ["venv-create"]
-run = "uv sync --all-extras"
+run = "uv sync --all-extras --all-groups"
 
 [tasks.export]
 description = "📋 Export Python dependencies to requirements*.txt files using uv (for legacy compatibility)"
@@ -80,6 +80,16 @@ run = """
 uvx ruff check --select F401,F821,F841 cookiecutter_aws_agentcore_runtime_basic_demo tests tests_int cdk .mise/tasks .claude/skills/pywf-oss-base
 python3 .claude/skills/pywf-oss-base/scripts/check_one_import_per_line.py --paths cookiecutter_aws_agentcore_runtime_basic_demo tests tests_int cdk .mise/tasks .claude/skills/pywf-oss-base
 """
+
+# AgentCore, local (no AWS)
+[tasks.ac-local-mcp]
+description = "🔌 Run the PowerPlantMcp MCP server locally on http://localhost:8000/mcp (Ctrl+C to stop)"
+run = ".venv/bin/python -m cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.power_plant_mcp"
+depends = ["inst"]
+
+[tasks.ac-local-mcp-call]
+description = "🔌 Call the local PowerPlantMcp server (start it first with ac-local-mcp): list tools, get site S-03"
+run = ".venv/bin/python .mise/tasks/ac-local-mcp-call.py"
 
 # Documentation
 [tasks.build-doc]
