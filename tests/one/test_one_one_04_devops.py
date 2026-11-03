@@ -6,6 +6,11 @@ from cookiecutter_aws_agentcore_runtime_basic_demo.one.one_04_devops import (
 from cookiecutter_aws_agentcore_runtime_basic_demo.one.one_04_devops import (
     delete_config,
 )
+from cookiecutter_aws_agentcore_runtime_basic_demo.one.one_04_devops import (
+    check_agentcore_deps,
+)
+
+import json
 
 import moto
 import boto3
@@ -53,6 +58,35 @@ def test_deploy_and_delete_config(config: Config, capsys):
         assert deploy_config(config=prd_config, ssm_client=one.ssm_client) == "created"
         assert "Config of 'prd' created (version 1, " in capsys.readouterr().out
         assert delete_config(config=prd_config, ssm_client=one.ssm_client) is True
+
+
+def test_check_agentcore_deps(config: Config, capsys):
+    # the policy ARN has the account ID in it, so use the account of moto
+    data = config.model_dump()
+    data["aws_account_id"] = moto.core.DEFAULT_ACCOUNT_ID
+    config = Config(**data)
+    with moto.mock_aws():
+        one = One()
+        one.config = config
+        one.iam_client = boto3.client("iam", region_name="us-east-1")
+        assert one.check_agentcore_deps() is False
+        assert "cdk-up-dev-agentcore-deps-stack" in capsys.readouterr().out
+        one.iam_client.create_policy(
+            PolicyName=config.iam_policy_name_agentcore_runtime,
+            PolicyDocument=json.dumps(
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": "ssm:GetParameter",
+                            "Resource": "*",
+                        }
+                    ],
+                }
+            ),
+        )
+        assert check_agentcore_deps(config=config, iam_client=one.iam_client) is True
 
 
 if __name__ == "__main__":

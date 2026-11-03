@@ -6,5 +6,6 @@ Public API of the ``cdk`` subpackage.
 
 from .stacks.alerts_stack import AlertsStack
 from .stacks.publisher_stack.stack import PublisherStack
+from .stacks.agentcore_deps_stack import AgentCoreDepsStack
 from .stack_ctx_enum import StackCtxEnum
 from .stack_enum import StackEnum

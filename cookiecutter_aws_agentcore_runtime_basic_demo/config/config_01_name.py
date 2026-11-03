@@ -16,6 +16,7 @@ assigned at creation.
 from __future__ import annotations
 
 import typing as T
+import urllib.parse
 from functools import cached_property
 
 if T.TYPE_CHECKING:  # pragma: no cover
@@ -101,6 +102,22 @@ class ConfigNameMixin:
         return self.get_cft_stack_url(self.cft_stack_name_publisher)
 
     @cached_property
+    def cft_stack_name_agentcore_deps(self: Config) -> str:
+        """
+        Name of the stack of what the AgentCore runtimes depend on but is not
+        AgentCore, such as ``my-project-dev-agentcore-deps``; deploy it before
+        ``ac-deploy-<env>``.
+        """
+        return self.get_cft_stack_name("agentcore-deps")
+
+    @cached_property
+    def cft_stack_url_agentcore_deps(self: Config) -> str:
+        """
+        Console URL of :attr:`cft_stack_name_agentcore_deps`.
+        """
+        return self.get_cft_stack_url(self.cft_stack_name_agentcore_deps)
+
+    @cached_property
     def cft_stack_name_agentcore(self: Config) -> str:
         """
         Name of the stack the AgentCore CLI deploys from ``agentcore/``, such as
@@ -170,6 +187,37 @@ class ConfigNameMixin:
         ARN of :attr:`iam_role_name_publisher`.
         """
         return f"arn:aws:iam::{self.aws_account_id}:role/{self.iam_role_name_publisher}"
+
+    # --------------------------------------------------------------------------
+    # IAM policies
+    # --------------------------------------------------------------------------
+    @cached_property
+    def iam_policy_name_agentcore_runtime(self: Config) -> str:
+        """
+        Name of the managed policy attached to the execution role of every
+        AgentCore runtime, such as ``my-project-dev-us-east-1-agentcore-runtime``.
+        IAM is global, so the name includes the region.
+        """
+        return f"{self.prefix_name_slug}-{self.aws_region}-agentcore-runtime"
+
+    @cached_property
+    def iam_policy_arn_agentcore_runtime(self: Config) -> str:
+        """
+        ARN of :attr:`iam_policy_name_agentcore_runtime`; ``agentcore.json`` lists
+        it in ``additionalPolicies`` of every runtime.
+        """
+        return (
+            f"arn:aws:iam::{self.aws_account_id}:policy"
+            f"/{self.iam_policy_name_agentcore_runtime}"
+        )
+
+    @cached_property
+    def iam_policy_url_agentcore_runtime(self: Config) -> str:
+        """
+        Console URL of :attr:`iam_policy_name_agentcore_runtime`.
+        """
+        quoted_arn = urllib.parse.quote(self.iam_policy_arn_agentcore_runtime, safe="")
+        return f"https://us-east-1.console.aws.amazon.com/iam/home#/policies/details/{quoted_arn}"
 
     # --------------------------------------------------------------------------
     # SSM parameters

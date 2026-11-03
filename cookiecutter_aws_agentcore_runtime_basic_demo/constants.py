@@ -21,7 +21,7 @@ after upgrading ``@aws/agentcore``.
 
 CONFIG_SSM_PARAM_NAME_VAR = "CONFIG_SSM_PARAM_NAME"
 """
-The SSM parameter that holds the config, on an AgentCore runtime: set per target
-by ``cdk-stack.ts`` from ``agentcore/runtime-env.json``, and for ``agentcore dev``
-by ``agentcore/.env.local``; both are written by ``mise run ac-gen``.
+The SSM parameter that holds the config, on an AgentCore runtime: set through
+``envVars`` in ``agentcore/agentcore.json``, which ``mise run ac-gen`` writes for
+one environment, so both a deployed runtime and ``agentcore dev`` get it.
 """

@@ -65,6 +65,10 @@ class StackCtxEnum:
     def publisher(self) -> StackCtx:
         return self._new(self.one.config.cft_stack_name_publisher)
 
+    @cached_property
+    def agentcore_deps(self) -> StackCtx:
+        return self._new(self.one.config.cft_stack_name_agentcore_deps)
+
     def get(self, stack: str) -> StackCtx:
         """
         The entry of a stack given by name, such as ``get("alerts")``.

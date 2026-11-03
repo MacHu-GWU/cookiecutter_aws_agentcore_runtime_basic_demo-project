@@ -25,6 +25,7 @@ import aws_cdk as cdk
 from .stack_ctx_enum import list_entry_names
 from .stacks.alerts_stack import AlertsStack
 from .stacks.publisher_stack.stack import PublisherStack
+from .stacks.agentcore_deps_stack import AgentCoreDepsStack
 
 if T.TYPE_CHECKING:  # pragma: no cover
     from ..one.api import One
@@ -56,6 +57,14 @@ class StackEnum:
             **self.one.stack_ctx_enum.publisher.to_stack_kwargs(),
             config=self.one.config,
             alert_topic=self.alerts.alert_topic,
+        )
+
+    @cached_property
+    def agentcore_deps(self) -> AgentCoreDepsStack:
+        return AgentCoreDepsStack(
+            scope=self.app,
+            **self.one.stack_ctx_enum.agentcore_deps.to_stack_kwargs(),
+            config=self.one.config,
         )
 
     def get(self, stack: str) -> cdk.Stack:

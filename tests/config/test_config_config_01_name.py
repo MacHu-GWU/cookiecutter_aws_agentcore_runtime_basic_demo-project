@@ -23,6 +23,8 @@ def test_names(config: Config):
     # stacks
     assert config.cft_stack_name_alerts == "my-project-dev-alerts"
     assert config.cft_stack_name_publisher == "my-project-dev-publisher"
+    assert config.cft_stack_name_agentcore_deps == "my-project-dev-agentcore-deps"
+    assert "filteringText=my-project-dev-agentcore-deps&" in config.cft_stack_url_agentcore_deps
     assert config.cft_stack_url_alerts == "https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=my-project-dev-alerts&filteringStatus=active&viewNested=true"
     assert config.cft_stack_url_publisher == "https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=my-project-dev-publisher&filteringStatus=active&viewNested=true"
     # exports
@@ -34,6 +36,10 @@ def test_names(config: Config):
     # iam
     assert config.iam_role_name_publisher == "my-project-dev-publisher"
     assert config.iam_role_arn_publisher == "arn:aws:iam::111122223333:role/my-project-dev-publisher"
+    # iam policies
+    assert config.iam_policy_name_agentcore_runtime == "my-project-dev-us-east-1-agentcore-runtime"
+    assert config.iam_policy_arn_agentcore_runtime == "arn:aws:iam::111122223333:policy/my-project-dev-us-east-1-agentcore-runtime"
+    assert config.iam_policy_url_agentcore_runtime == "https://us-east-1.console.aws.amazon.com/iam/home#/policies/details/arn%3Aaws%3Aiam%3A%3A111122223333%3Apolicy%2Fmy-project-dev-us-east-1-agentcore-runtime"
     # ssm
     assert config.ssm_param_name_config == "/my-project-dev/config"
     assert config.ssm_param_arn_config == "arn:aws:ssm:us-east-1:111122223333:parameter/my-project-dev/config"

@@ -33,7 +33,7 @@ This project adds, per environment, in the same block:
 | :--- | :--- | :--- |
 | `config-deploy-<env>` / `config-deploy-all` | `one.deploy_config()`: the whole config as JSON to SSM `config.ssm_param_name_config`, a `SecureString`, only if it changed | changes |
 | `config-delete-<env>` / `config-delete-all` | `one.delete_config()` | changes |
-| `ac-deploy-<env>` | `agentcore deploy --target <env>`, after `ac-gen` and `config-deploy-<env>` | changes |
+| `ac-deploy-<env>` | after `config-deploy-<env>`: check that the `agentcore_deps` stack is deployed, `ac-gen` for `<env>`, then `agentcore deploy --target <env>` | changes |
 
 ---
 

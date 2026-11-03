@@ -1,14 +1,18 @@
 # -*- coding: utf-8 -*-
 
-from cookiecutter_aws_agentcore_runtime_basic_demo.cdk.stack_ctx_enum import list_entry_names
-from cookiecutter_aws_agentcore_runtime_basic_demo.cdk.stack_ctx_enum import StackCtxEnum
+from cookiecutter_aws_agentcore_runtime_basic_demo.cdk.stack_ctx_enum import (
+    list_entry_names,
+)
+from cookiecutter_aws_agentcore_runtime_basic_demo.cdk.stack_ctx_enum import (
+    StackCtxEnum,
+)
 
 from cookiecutter_aws_agentcore_runtime_basic_demo.config.api import Config
 from cookiecutter_aws_agentcore_runtime_basic_demo.one.api import One
 
 
 def test_list_entry_names():
-    assert list_entry_names(StackCtxEnum) == ["alerts", "publisher"]
+    assert list_entry_names(StackCtxEnum) == ["alerts", "publisher", "agentcore_deps"]
 
 
 class TestStackCtxEnum:
@@ -28,7 +32,11 @@ class TestStackCtxEnum:
         assert stack_ctx.bsm is one.bsm
         assert stack_ctx_enum.publisher.stack_name == "my-project-dev-publisher"
         assert stack_ctx_enum.get("alerts") is stack_ctx
-        assert stack_ctx_enum.get_all() == [stack_ctx, stack_ctx_enum.publisher]
+        assert stack_ctx_enum.get_all() == [
+            stack_ctx,
+            stack_ctx_enum.publisher,
+            stack_ctx_enum.agentcore_deps,
+        ]
 
 
 if __name__ == "__main__":

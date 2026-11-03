@@ -7,6 +7,7 @@ def test():
     _ = api
     _ = api.AlertsStack
     _ = api.PublisherStack
+    _ = api.AgentCoreDepsStack
     _ = api.StackCtxEnum
     _ = api.StackEnum
 

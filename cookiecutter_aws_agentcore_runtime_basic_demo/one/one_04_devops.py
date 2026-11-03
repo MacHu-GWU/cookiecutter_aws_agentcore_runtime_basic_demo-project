@@ -2,7 +2,8 @@
 
 """
 The deploy steps of ``one`` other than ``cdk deploy`` and ``agentcore deploy``:
-the config in SSM Parameter Store, which the AgentCore runtimes read.
+the config in SSM Parameter Store, which the AgentCore runtimes read, and the
+check that what ``agentcore deploy`` refers to is deployed.
 """
 
 from __future__ import annotations
@@ -13,6 +14,7 @@ import simple_aws_ssm_parameter_store.api as simple_aws_ssm_parameter_store
 
 if T.TYPE_CHECKING:  # pragma: no cover
     from mypy_boto3_ssm.client import SSMClient
+    from mypy_boto3_iam.client import IAMClient
     from ..config.api import Config
     from .one_00_main import One
 
@@ -82,9 +84,35 @@ def delete_config(
     return deleted
 
 
+def check_agentcore_deps(
+    config: Config,
+    iam_client: IAMClient,
+) -> bool:
+    """
+    Check that the ``agentcore_deps`` stack is deployed, by looking for the
+    runtime policy that ``agentcore.json`` refers to; ``agentcore deploy`` would
+    fail without it. Prints what to do when it is missing.
+
+    :param iam_client: an IAM client of the account of ``config``.
+
+    :returns: ``True`` if the policy exists.
+    """
+    try:
+        iam_client.get_policy(PolicyArn=config.iam_policy_arn_agentcore_runtime)
+    except iam_client.exceptions.NoSuchEntityException:
+        print(
+            f"The policy {config.iam_policy_name_agentcore_runtime} does not exist: "
+            f"deploy the stack {config.cft_stack_name_agentcore_deps} first, "
+            f"with `mise run cdk-up-{config.env_name}-agentcore-deps-stack`"
+        )
+        return False
+    print(f"The policy {config.iam_policy_name_agentcore_runtime} exists")
+    return True
+
+
 class OneDevOpsMixin:
     """
-    Config deployment.
+    Config deployment, and the checks before ``agentcore deploy``.
     """
 
     def deploy_config(self: One) -> str:
@@ -98,3 +126,9 @@ class OneDevOpsMixin:
         :func:`delete_config` for the current environment.
         """
         return delete_config(config=self.config, ssm_client=self.ssm_client)
+
+    def check_agentcore_deps(self: One) -> bool:
+        """
+        :func:`check_agentcore_deps` for the current environment.
+        """
+        return check_agentcore_deps(config=self.config, iam_client=self.iam_client)

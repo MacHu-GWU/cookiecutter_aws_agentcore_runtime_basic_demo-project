@@ -8,24 +8,18 @@ from cookiecutter_aws_agentcore_runtime_basic_demo.paths import path_enum
 
 
 def test_main(monkeypatch, tmp_path):
-    """Generate every file into a temp dir, with the configs of every environment."""
+    """Generate every file into a temp dir, for the current environment only."""
     monkeypatch.setattr(path_enum, "path_agentcore_json", tmp_path / "agentcore.json")
     monkeypatch.setattr(
         path_enum, "path_aws_targets_json", tmp_path / "aws-targets.json"
     )
-    monkeypatch.setattr(
-        path_enum, "path_runtime_env_json", tmp_path / "runtime-env.json"
-    )
-    monkeypatch.setattr(path_enum, "path_agentcore_env_local", tmp_path / ".env.local")
     monkeypatch.setattr(path_enum, "dir_agentcore_app", tmp_path / "app")
     monkeypatch.setenv("ENV_NAME", "tst")
     main()
-    runtime_env = json.loads((tmp_path / "runtime-env.json").read_text())
-    assert list(runtime_env) == ["dev", "tst", "prd"]
-    # .env.local is for the current environment
-    assert "ENV_NAME=tst\n" in (tmp_path / ".env.local").read_text()
     targets = json.loads((tmp_path / "aws-targets.json").read_text())
-    assert [target["name"] for target in targets] == ["dev", "tst", "prd"]
+    assert [target["name"] for target in targets] == ["tst"]
+    data = json.loads((tmp_path / "agentcore.json").read_text())
+    assert {"name": "ENV_NAME", "value": "tst"} in data["runtimes"][0]["envVars"]
     assert (tmp_path / "app" / "PowerPlantMcp" / "main.py").exists()
     pyproject_toml = (tmp_path / "app" / "SiteAgent" / "pyproject.toml").read_text()
     assert 'name = "siteagent"' in pyproject_toml

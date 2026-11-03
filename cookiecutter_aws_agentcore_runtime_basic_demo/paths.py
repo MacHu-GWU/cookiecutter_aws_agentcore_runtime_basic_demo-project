@@ -44,8 +44,6 @@ class PathEnum:
     dir_agentcore = dir_project_root / "agentcore"
     path_agentcore_json = dir_agentcore / "agentcore.json"
     path_aws_targets_json = dir_agentcore / "aws-targets.json"
-    path_runtime_env_json = dir_agentcore / "runtime-env.json"
-    path_agentcore_env_local = dir_agentcore / ".env.local"
     path_agentcore_cdk_stack_ts = dir_agentcore / "cdk" / "lib" / "cdk-stack.ts"
     dir_agentcore_app = (
         dir_project_root / "app"

@@ -6,8 +6,12 @@ import aws_cdk as cdk
 
 from cookiecutter_aws_agentcore_runtime_basic_demo.config.api import Config
 from cookiecutter_aws_agentcore_runtime_basic_demo.one.api import One
-from cookiecutter_aws_agentcore_runtime_basic_demo.cdk.stack_ctx_enum import StackCtxEnum
-from cookiecutter_aws_agentcore_runtime_basic_demo.cdk.stack_ctx_enum import list_entry_names
+from cookiecutter_aws_agentcore_runtime_basic_demo.cdk.stack_ctx_enum import (
+    StackCtxEnum,
+)
+from cookiecutter_aws_agentcore_runtime_basic_demo.cdk.stack_ctx_enum import (
+    list_entry_names,
+)
 
 
 def test_entries_match_stack_ctx_enum():
@@ -28,12 +32,13 @@ def test_synth(config: Config, tmp_path):
     se.synth()
     names = sorted(p.name for p in tmp_path.glob("*.template.json"))
     assert names == [
+        "my-project-dev-agentcore-deps.template.json",
         "my-project-dev-alerts.template.json",
         "my-project-dev-publisher.template.json",
     ]
     assert se.alerts in se.publisher.dependencies
     assert se.get("alerts") is se.alerts
-    assert se.get_all() == [se.alerts, se.publisher]
+    assert se.get_all() == [se.alerts, se.publisher, se.agentcore_deps]
 
 
 if __name__ == "__main__":

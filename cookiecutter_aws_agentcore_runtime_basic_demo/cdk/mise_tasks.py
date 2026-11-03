@@ -7,7 +7,9 @@ four ``cdk-<action>-<env>-all`` per environment. Each task prints the console UR
 of the stacks it acts on, then runs one plain cdk command in ``cdk/`` with
 ``ENV_NAME`` and ``--profile {{env.AWS_PROFILE_FOR_<ENV>}}``. See the ``pywf-aws-cdk-base`` skill, ``12-cdk-mise-tasks.md``.
 Per environment it also renders ``config-deploy-<env>``, ``config-delete-<env>``,
-and ``ac-deploy-<env>`` (``agentcore deploy``, after deploying the config), and
+and ``ac-deploy-<env>`` (after deploying the config: check that the
+``agentcore_deps`` stack is deployed, run ``ac-gen`` for ``<env>``, then
+``agentcore deploy``), and
 then ``config-deploy-all`` and ``config-delete-all``.
 
 The stacks are the entries of :class:`~cookiecutter_aws_agentcore_runtime_basic_demo.cdk.stack_ctx_enum.StackCtxEnum`,
@@ -247,6 +249,8 @@ def _render_env_tasks(env_name: str, agentcore_target: StackTarget) -> str:
         [
             "echo '--- CloudFormation console ---'",
             f"echo 'AgentCore stack: {agentcore_target.console_url}'",
+            ".venv/bin/python .mise/tasks/ac-check-deps.py",
+            ".venv/bin/python .mise/tasks/ac-gen.py",
             "echo '--- Run command ---'",
             f"echo '{deploy_command}'",
             deploy_command,
@@ -267,8 +271,9 @@ def _render_env_tasks(env_name: str, agentcore_target: StackTarget) -> str:
         'run = ".venv/bin/python .mise/tasks/config-delete.py"',
         "",
         f'[tasks."ac-deploy-{env_name}"]',
-        f'description = "🚀 Deploy every AgentCore runtime to the {target_name} target, after deploying the config (writes to AWS)"',
-        f'depends = ["ac-gen", "{config_deploy_task_name}"]',
+        f'description = "🚀 Deploy every AgentCore runtime to the {target_name} target: check the agentcore-deps stack, deploy the config, generate the project for {env_name}, deploy (writes to AWS)"',
+        f'env = {{ {ENV_NAME_VAR} = "{env_name}" }}',
+        f'depends = ["inst", "{config_deploy_task_name}"]',
         f'run = """\n{deploy_script}\n"""',
     ]
     return "\n".join(lines)

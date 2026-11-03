@@ -87,3 +87,10 @@ class OneBotoSesMixin:
         An SSM client from :attr:`boto_ses`.
         """
         return self.boto_ses.client("ssm")
+
+    @cached_property
+    def iam_client(self: One):  # pragma: no cover
+        """
+        An IAM client from :attr:`boto_ses`.
+        """
+        return self.boto_ses.client("iam")
