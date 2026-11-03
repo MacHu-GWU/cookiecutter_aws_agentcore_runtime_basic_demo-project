@@ -7,6 +7,9 @@ from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import (
     get_weather,
 )
 from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import (
+    strip_thinking,
+)
+from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import (
     get_mcp_url,
 )
 from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import make_agent
@@ -53,6 +56,13 @@ def test_get_weather():
     assert get_weather(41.1, -105.9)["safe_for_inspection"] is False
 
 
+def test_strip_thinking():
+    text = "<thinking> windy,\n so no </thinking>\n\nNo, too windy."
+    assert strip_thinking(text) == "No, too windy."
+    assert strip_thinking("<response> No. </response>") == "No."
+    assert strip_thinking("plain") == "plain"
+
+
 def test_get_mcp_url(monkeypatch):
     monkeypatch.delenv("MCP_URL", raising=False)
     assert get_mcp_url() == LOCAL_MCP_URL
@@ -81,7 +91,7 @@ class FakeAgent:
         self.cleaned = False
 
     def __call__(self, prompt):
-        return f"answer to {prompt}"
+        return f"<thinking>hmm</thinking> answer to {prompt}"
 
     def cleanup(self):
         self.cleaned = True

@@ -18,7 +18,10 @@ from ..env import EnvNameEnum
 from ..config.api import Config
 
 #: The Python of every runtime; the dev Python, ``[tools] python`` in ``mise.toml``.
-RUNTIME_VERSION = "PYTHON_3_12"
+RUNTIME_PYTHON = "3.12"
+
+#: :data:`RUNTIME_PYTHON` as AgentCore names it in ``agentcore.json``.
+RUNTIME_VERSION = "PYTHON_" + RUNTIME_PYTHON.replace(".", "_")
 
 
 @dataclasses.dataclass

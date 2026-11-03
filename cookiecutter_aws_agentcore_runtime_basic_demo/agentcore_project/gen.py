@@ -33,6 +33,7 @@ def generate_all(config: Config, configs: list[Config]) -> None:
             dir_runtime=path_enum.dir_agentcore_app / spec.name,
             name=spec.name,
             module=spec.module,
+            protocol=spec.protocol,
             requirements=requirements,
         )
         print(f"Assembled {path_enum.dir_agentcore_app / spec.name}")

@@ -115,6 +115,16 @@ description = "🏗️ Build every runtime's CodeZip and synth the AgentCore sta
 run = "agentcore build"
 depends = ["ac-gen"]
 
+[tasks.ac-dev-mcp]
+description = "🏗️ Run PowerPlantMcp from app/ with `agentcore dev` on :8000, as packaged (call it with ac-local-mcp-call)"
+run = "agentcore dev --agent PowerPlantMcp --no-traces"
+depends = ["ac-gen"]
+
+[tasks.ac-dev-agent]
+description = "🏗️ Run SiteAgent from app/ with `agentcore dev` on :8080 with the dev profile (needs ac-dev-mcp; call it with ac-local-agent-call)"
+run = "AWS_PROFILE=$AWS_PROFILE_FOR_DEV AWS_REGION=us-east-1 agentcore dev --agent SiteAgent --no-traces"
+depends = ["ac-gen"]
+
 # Documentation
 [tasks.build-doc]
 description = "📚 Build Sphinx documentation using sphinx-build (generates HTML in docs/build/html/)"

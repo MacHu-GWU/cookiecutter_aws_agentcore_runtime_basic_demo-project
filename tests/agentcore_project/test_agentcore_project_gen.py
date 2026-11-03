@@ -18,7 +18,8 @@ def test_main(monkeypatch, tmp_path):
     targets = json.loads((tmp_path / "aws-targets.json").read_text())
     assert [target["name"] for target in targets] == ["dev", "tst", "prd"]
     assert (tmp_path / "app" / "PowerPlantMcp" / "main.py").exists()
-    assert (tmp_path / "app" / "SiteAgent" / "pyproject.toml").exists()
+    pyproject_toml = (tmp_path / "app" / "SiteAgent" / "pyproject.toml").read_text()
+    assert 'name = "siteagent"' in pyproject_toml
 
 
 if __name__ == "__main__":

@@ -12,6 +12,7 @@ same server runs locally.
 from __future__ import annotations
 
 import os
+import re
 
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 from strands import Agent
@@ -31,11 +32,27 @@ LOCAL_MCP_URL = "http://localhost:8000/mcp"
 SYSTEM_PROMPT = (
     "You help plan inspections of solar and wind power plant sites. "
     "Use the tools to look up sites, their assets, assigned technicians, "
-    "and tomorrow's weather. Answer briefly and name the facts you used."
+    "and tomorrow's weather. Answer every part of the question briefly, "
+    "and name the facts you used."
 )
+
+#: Nova models may wrap their reasoning in ``<thinking>`` tags, which is not part of the answer.
+_THINKING_PATTERN = re.compile(r"<thinking>.*?</thinking>", re.DOTALL)
+
+#: Nova models may wrap the answer itself in ``<response>`` tags.
+_RESPONSE_TAG_PATTERN = re.compile(r"</?response>")
 
 #: The agent's own tool; its description is the docstring of the business function.
 get_weather = tool(weather.get_weather)
+
+
+def strip_thinking(text: str) -> str:
+    """
+    Remove ``<thinking>...</thinking>`` blocks and ``<response>`` tags from a model answer.
+    """
+    text = _THINKING_PATTERN.sub("", text)
+    text = _RESPONSE_TAG_PATTERN.sub("", text)
+    return text.strip()
 
 
 def get_mcp_url() -> str:
@@ -71,7 +88,7 @@ def invoke(payload: dict) -> dict:
         result = agent(payload["prompt"])
     finally:
         agent.cleanup()
-    return {"result": str(result)}
+    return {"result": strip_thinking(str(result))}
 
 
 def main():

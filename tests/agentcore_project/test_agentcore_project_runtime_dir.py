@@ -37,6 +37,7 @@ def test_render_pyproject_toml():
     )
     data = tomllib.loads(content)
     assert data["project"]["name"] == "siteagent"
+    assert data["project"]["requires-python"] == ">=3.12"
     assert (
         data["project"]["dependencies"][1] == "pywin32==312 ; sys_platform == 'win32'"
     )
@@ -45,15 +46,25 @@ def test_render_pyproject_toml():
 def test_assemble_runtime_dir(tmp_path):
     """The copied code imports on its own: nothing outside the copied subpackages."""
     dir_runtime = tmp_path / "SiteAgent"
-    (dir_runtime / "stale").mkdir(parents=True)
+    path_stale = dir_runtime / PACKAGE_NAME / "stale.py"
+    path_stale.parent.mkdir(parents=True)
+    path_stale.write_text("")
+    path_venv = dir_runtime / ".venv" / "keep"
+    path_venv.parent.mkdir()
+    path_venv.write_text("")
     assemble_runtime_dir(
         dir_runtime=dir_runtime,
         name="SiteAgent",
         module="runtimes.site_agent",
+        protocol="HTTP",
         requirements=["mcp==1.0.0"],
     )
-    assert not (dir_runtime / "stale").exists()
-    assert "runtimes.site_agent import main" in (dir_runtime / "main.py").read_text()
+    assert not path_stale.exists()
+    assert path_venv.exists()
+    main_py = (dir_runtime / "main.py").read_text()
+    assert "runtimes.site_agent import main\n" in main_py
+    assert "runtimes.site_agent import app\n" in main_py
+    assert 'if __name__ == "__main__":' in main_py
     code = (
         f"import sys, json; sys.path.insert(0, {str(dir_runtime)!r}); "
         f"import {PACKAGE_NAME}.runtimes.site_agent as m; "
