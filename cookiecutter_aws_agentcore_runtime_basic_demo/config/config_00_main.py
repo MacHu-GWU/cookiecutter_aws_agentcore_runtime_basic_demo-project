@@ -55,6 +55,7 @@ class Config(
     aws_region: str = Field()  #: The AWS region this environment deploys to; the session must match it.
     log_level: str = Field()  #: Log level of this environment, such as ``DEBUG``; the alerts stack stores it in SSM.
     agentcore_project_name: str = Field(pattern=r"^[A-Za-z][A-Za-z0-9]{0,22}$")  #: The AgentCore CLI project name, such as ``MyProject``: a letter, then letters and digits, at most 23 characters; it starts every AgentCore resource name.
+    db_connection_string: str = Field()  #: The SQLAlchemy URL of the power plant database, kept in ``config-<env>-secret.json5``; ``sqlite+pysqlite:///:memory:`` in the demo.
     site_agent_model_id: str = Field()  #: The Bedrock model (or inference profile) ID of the SiteAgent, such as ``us.amazon.nova-2-lite-v1:0``.
     # fmt: on
 

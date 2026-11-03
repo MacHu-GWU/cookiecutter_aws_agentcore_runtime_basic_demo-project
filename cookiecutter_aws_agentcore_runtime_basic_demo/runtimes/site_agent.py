@@ -60,7 +60,8 @@ def print_config_source():
     """
     print(
         f"Loaded the config of {one.config.env_name!r} "
-        f"on runtime {one.runtime.current_runtime_name()!r}"
+        f"on runtime {one.runtime.current_runtime_name()!r}",
+        flush=True,
     )
 
 

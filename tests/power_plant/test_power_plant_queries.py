@@ -10,14 +10,35 @@ from cookiecutter_aws_agentcore_runtime_basic_demo.power_plant.queries import (
 )
 
 import pytest
+import sqlalchemy as sa
 
-from cookiecutter_aws_agentcore_runtime_basic_demo.power_plant.data import SITES
+from cookiecutter_aws_agentcore_runtime_basic_demo.power_plant.orm import (
+    create_db_engine,
+)
+from cookiecutter_aws_agentcore_runtime_basic_demo.power_plant.orm import (
+    load_seed_data,
+)
 
 
-def test_list_sites():
-    assert len(list_sites()) == 5
-    assert [row["id"] for row in list_sites(kind="wind")] == ["S-03", "S-04"]
-    assert list_sites(kind="hydro") == []
+@pytest.fixture(scope="module")
+def engine() -> sa.Engine:
+    engine = create_db_engine("sqlite+pysqlite:///:memory:")
+    load_seed_data(engine)
+    return engine
+
+
+def test_list_sites(engine):
+    assert len(list_sites(engine)) == 5
+    assert list_sites(engine)[0] == {
+        "id": "S-01",
+        "name": "Sunrise Valley",
+        "kind": "solar",
+        "lat": 35.05,
+        "lon": -117.60,
+        "capacity_mw": 120,
+    }
+    assert [row["id"] for row in list_sites(engine, kind="wind")] == ["S-03", "S-04"]
+    assert list_sites(engine, kind="hydro") == []
 
 
 @pytest.mark.parametrize(
@@ -29,35 +50,28 @@ def test_list_sites():
         ("S-01", "inverter", 2),
     ],
 )
-def test_list_assets(site_id, kind, expected):
-    assert len(list_assets(site_id=site_id, kind=kind)) == expected
+def test_list_assets(engine, site_id, kind, expected):
+    assert len(list_assets(engine, site_id=site_id, kind=kind)) == expected
 
 
-def test_get_site():
-    site = get_site("S-03")
+def test_get_site(engine):
+    site = get_site(engine, "S-03")
     assert site["name"] == "Ridge Wind"
     assert [row["id"] for row in site["assets"]] == ["A-06", "A-07", "A-08"]
     assert [row["id"] for row in site["technicians"]] == ["T-02", "T-04"]
 
 
-def test_get_site_returns_a_copy():
-    """Changing a result must not change the fake database."""
-    site = get_site("S-01")
-    site["name"] = "changed"
-    assert SITES[0]["name"] == "Sunrise Valley"
-
-
-def test_get_technician():
-    technician = get_technician("T-01")
+def test_get_technician(engine):
+    technician = get_technician(engine, "T-01")
     assert technician["name"] == "Alice Chen"
     assert [row["id"] for row in technician["sites"]] == ["S-01", "S-02", "S-05"]
 
 
-def test_not_found():
+def test_not_found(engine):
     with pytest.raises(ValueError, match="site 'S-99' not found"):
-        get_site("S-99")
+        get_site(engine, "S-99")
     with pytest.raises(ValueError, match="technician 'T-99' not found"):
-        get_technician("T-99")
+        get_technician(engine, "T-99")
 
 
 if __name__ == "__main__":

@@ -1,9 +1,16 @@
 # -*- coding: utf-8 -*-
 
 """
-Public API of the ``power_plant`` subpackage: the fake database, its queries, and the fake weather.
+Public API of the ``power_plant`` subpackage: the database, its queries, and the fake weather.
 """
 
+from .orm import Base
+from .orm import Site
+from .orm import Asset
+from .orm import Technician
+from .orm import SiteTechnician
+from .orm import create_db_engine
+from .orm import load_seed_data
 from .queries import list_sites
 from .queries import list_assets
 from .queries import get_site

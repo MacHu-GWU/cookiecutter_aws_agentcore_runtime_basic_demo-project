@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 
 """
-A fake in-memory database of power plant sites: 4 tables as lists of dicts.
+The seed data of the power plant database: 4 tables as lists of dicts, loaded by
+:func:`~cookiecutter_aws_agentcore_runtime_basic_demo.power_plant.orm.load_seed_data`.
 
 - ``SITES`` 1:N ``ASSETS`` (by ``site_id``).
 - ``SITES`` N:M ``TECHNICIANS`` (through ``SITE_TECHNICIANS``).
 
-This subpackage must stay pure Python: it is copied into the AgentCore runtimes,
-so it never imports config, ``one``, cdk, or any third-party library.
+This subpackage is copied into the AgentCore runtimes, so it imports only the
+standard library and packages of the ``agentcore`` dependency group (SQLAlchemy),
+never config, ``one``, or cdk: callers pass it an engine.
 """
 
 # fmt: off

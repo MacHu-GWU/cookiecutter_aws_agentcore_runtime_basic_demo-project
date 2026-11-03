@@ -12,6 +12,7 @@ sub packages and modules
 
     api <api>
     data <data>
+    orm <orm>
     queries <queries>
     weather <weather>
     

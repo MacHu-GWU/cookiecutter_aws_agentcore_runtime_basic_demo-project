@@ -10,14 +10,42 @@ import asyncio
 
 from mcp.server.fastmcp.exceptions import ToolError
 
+from cookiecutter_aws_agentcore_runtime_basic_demo.power_plant import queries
+
 
 def test_list_tools():
     tools = asyncio.run(mcp.list_tools())
     names = sorted(tool.name for tool in tools)
     assert names == ["get_site", "get_technician", "list_assets", "list_sites"]
+    for tool in tools:
+        # the description is the query's docstring; the engine is not a parameter
+        assert tool.description.strip() == getattr(queries, tool.name).__doc__.strip()
+        assert "engine" not in tool.inputSchema["properties"]
 
 
-def test_call_tool():
+@pytest.mark.parametrize(
+    "name, arguments, expected_ids",
+    [
+        ("list_sites", {"kind": "wind"}, ["S-03", "S-04"]),
+        ("list_assets", {"site_id": "S-03"}, ["A-06", "A-07", "A-08"]),
+    ],
+)
+def test_call_list_tool(name, arguments, expected_ids):
+    """
+    A list tool reaches its query through one.engine; FastMCP returns a list
+    result as structured output, ``{"result": [...]}``.
+    """
+    _, structured = asyncio.run(mcp.call_tool(name, arguments))
+    assert [row["id"] for row in structured["result"]] == expected_ids
+
+
+def test_call_tool_get_technician():
+    content = asyncio.run(mcp.call_tool("get_technician", {"technician_id": "T-02"}))
+    technician = json.loads(content[0].text)
+    assert [row["id"] for row in technician["sites"]] == ["S-03"]
+
+
+def test_call_tool_get_site():
     """A tool call goes through the MCP layer and returns the query result as JSON text."""
     content = asyncio.run(mcp.call_tool("get_site", {"site_id": "S-03"}))
     site = json.loads(content[0].text)

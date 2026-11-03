@@ -5,6 +5,13 @@ from cookiecutter_aws_agentcore_runtime_basic_demo.power_plant import api
 
 def test():
     _ = api
+    _ = api.Base
+    _ = api.Site
+    _ = api.Asset
+    _ = api.Technician
+    _ = api.SiteTechnician
+    _ = api.create_db_engine
+    _ = api.load_seed_data
     _ = api.list_sites
     _ = api.list_assets
     _ = api.get_site

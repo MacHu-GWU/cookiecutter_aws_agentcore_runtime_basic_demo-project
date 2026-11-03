@@ -24,7 +24,9 @@ class TestConfig:
         (tmp_path / "config-dev.json5").write_text(
             "// comment\n{aws_account_id: '1', aws_region: 'r', log_level: 'dev'}"
         )
-        (tmp_path / "config-dev-secret.json5").write_text("{project_name: 'b'}")
+        (tmp_path / "config-dev-secret.json5").write_text(
+            "{project_name: 'b', db_connection_string: 'sqlite://'}"
+        )
         conf = Config.load_from_local_config_file(env_name="dev", dir_config=tmp_path)
         assert conf.project_name == "b"
         assert conf.env_name == "dev"

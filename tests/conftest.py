@@ -35,7 +35,10 @@ def fake_dir_config(tmp_path_factory):
             shutil.copy(path, dir_config / path.name)
     for env_name in EnvNameEnum:
         path = dir_config / f"config-{env_name.value}-secret.json5"
-        path.write_text('{aws_account_id: "111122223333"}')
+        path.write_text(
+            '{aws_account_id: "111122223333", '
+            'db_connection_string: "sqlite+pysqlite:///:memory:"}'
+        )
     with pytest.MonkeyPatch.context() as mp:
         mp.setattr(path_enum, "dir_config", dir_config)
         yield dir_config
@@ -53,5 +56,6 @@ def config() -> Config:
         aws_region="us-east-1",
         log_level="DEBUG",
         agentcore_project_name="MyProject",
+        db_connection_string="sqlite+pysqlite:///:memory:",
         site_agent_model_id="us.amazon.nova-2-lite-v1:0",
     )
