@@ -5,13 +5,15 @@ Debug client of the local PowerPlantMcp server (``mise run ac-local-mcp``):
 list its tools, then call ``get_site`` for site S-03.
 """
 
+import os
 import json
 import asyncio
 
 from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 
-MCP_URL = "http://localhost:8000/mcp"
+#: Set by ``mise run ac-local-mcp-call``; the default is the port of ``agentcore dev`` without ``--port``.
+MCP_URL = os.environ.get("MCP_URL", "http://localhost:8000/mcp")
 
 
 async def main():

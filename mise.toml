@@ -7,6 +7,12 @@ READTHEDOCS_TOKEN = "{{ exec(command='uvx --from home-secret-toml hst get readth
 # Make uv use the mise Python below (first ``python`` on PATH), not a uv-managed one
 # or a global ``~/.config/uv/.python-version`` pin. ``[tools] python`` is the one dev version.
 UV_PYTHON = "python"
+# Ports of the local servers (ac-local-*, ac-dev-*). They are unusual on purpose, so
+# whatever listens there is almost surely a leftover server of ours; each server task
+# first runs .mise/tasks/free-port.py, which stops only processes running in this repo.
+# Deployed runtimes always listen on AgentCore's 8000 (MCP) and 8080 (HTTP).
+LOCAL_MCP_PORT = "18731"
+LOCAL_AGENT_PORT = "18732"
 # Local, per-person settings; copy .env.example to .env (git-ignored) and fill in:
 # - ENV_NAME: the current environment (dev, tst, prd) of one.config / one.bsm; default dev.
 # - AWS_PROFILE_FOR_DEV, AWS_PROFILE_FOR_TST, AWS_PROFILE_FOR_PRD: the AWS CLI profile of
@@ -82,24 +88,34 @@ python3 .claude/skills/pywf-oss-base/scripts/check_one_import_per_line.py --path
 """
 
 # AgentCore, local (no AWS)
+[tasks.free-port]
+description = "🧹 Stop this repo's leftover server on a port: mise run free-port --port <port> (never stops a process outside this repo)"
+run = ".venv/bin/python .mise/tasks/free-port.py"
+
 [tasks.ac-local-mcp]
-description = "🔌 Run the PowerPlantMcp MCP server locally on http://localhost:8000/mcp (Ctrl+C to stop)"
-run = ".venv/bin/python -m cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.power_plant_mcp"
+description = "🔌 Run the PowerPlantMcp MCP server locally on http://localhost:$LOCAL_MCP_PORT/mcp (Ctrl+C to stop)"
+run = [
+    ".venv/bin/python .mise/tasks/free-port.py --port $LOCAL_MCP_PORT",
+    "FASTMCP_PORT=$LOCAL_MCP_PORT .venv/bin/python -m cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.power_plant_mcp",
+]
 depends = ["inst"]
 
 [tasks.ac-local-mcp-call]
-description = "🔌 Call the local PowerPlantMcp server (start it first with ac-local-mcp): list tools, get site S-03"
-run = ".venv/bin/python .mise/tasks/ac-local-mcp-call.py"
+description = "🔌 Call the local PowerPlantMcp server (start it first with ac-local-mcp or ac-dev-mcp): list tools, get site S-03"
+run = "MCP_URL=http://localhost:$LOCAL_MCP_PORT/mcp .venv/bin/python .mise/tasks/ac-local-mcp-call.py"
 
 [tasks.ac-local-agent]
-description = "🤖 Run the SiteAgent agent locally on http://localhost:8080 (needs ac-local-mcp running, and Bedrock access with the dev profile)"
-run = "AWS_PROFILE=$AWS_PROFILE_FOR_DEV AWS_REGION=us-east-1 .venv/bin/python -m cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent"
+description = "🤖 Run the SiteAgent agent locally on http://localhost:$LOCAL_AGENT_PORT (needs ac-local-mcp running, and Bedrock access with the dev profile)"
+run = [
+    ".venv/bin/python .mise/tasks/free-port.py --port $LOCAL_AGENT_PORT",
+    "AWS_PROFILE=$AWS_PROFILE_FOR_DEV AWS_REGION=us-east-1 MCP_URL=http://localhost:$LOCAL_MCP_PORT/mcp .venv/bin/python -m uvicorn cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent:app --host 127.0.0.1 --port $LOCAL_AGENT_PORT",
+]
 depends = ["inst"]
 
 [tasks.ac-local-agent-call]
-description = "🤖 Ask the local SiteAgent the demo question (start ac-local-mcp and ac-local-agent first)"
+description = "🤖 Ask the local SiteAgent the demo question (start the MCP server and the agent first, with ac-local-* or ac-dev-*)"
 run = """
-curl -s -X POST http://localhost:8080/invocations -H 'Content-Type: application/json' \
+curl -s -X POST http://localhost:$LOCAL_AGENT_PORT/invocations -H 'Content-Type: application/json' \
   -d '{"prompt": "Can we send someone to inspect the turbines at site S-03 tomorrow? Who is assigned there?"}'
 echo
 """
@@ -115,15 +131,35 @@ description = "🏗️ Build every runtime's CodeZip and synth the AgentCore sta
 run = "agentcore build"
 depends = ["ac-gen"]
 
+# An explicit --port: without it, agentcore dev silently moves to the next free port
+# when the default one is taken, and the callers would reach the old server.
 [tasks.ac-dev-mcp]
-description = "🏗️ Run PowerPlantMcp from app/ with `agentcore dev` on :8000, as packaged (call it with ac-local-mcp-call)"
-run = "agentcore dev --agent PowerPlantMcp --no-traces"
+description = "🏗️ Run PowerPlantMcp from app/ with `agentcore dev` on :$LOCAL_MCP_PORT, as packaged (call it with ac-local-mcp-call)"
+run = [
+    ".venv/bin/python .mise/tasks/free-port.py --port $LOCAL_MCP_PORT",
+    "agentcore dev --agent PowerPlantMcp --no-traces --port $LOCAL_MCP_PORT",
+]
 depends = ["ac-gen"]
 
 [tasks.ac-dev-agent]
-description = "🏗️ Run SiteAgent from app/ with `agentcore dev` on :8080 with the dev profile (needs ac-dev-mcp; call it with ac-local-agent-call)"
-run = "AWS_PROFILE=$AWS_PROFILE_FOR_DEV AWS_REGION=us-east-1 agentcore dev --agent SiteAgent --no-traces"
+description = "🏗️ Run SiteAgent from app/ with `agentcore dev` on :$LOCAL_AGENT_PORT with the dev profile (needs ac-dev-mcp; call it with ac-local-agent-call)"
+run = [
+    ".venv/bin/python .mise/tasks/free-port.py --port $LOCAL_AGENT_PORT",
+    "AWS_PROFILE=$AWS_PROFILE_FOR_DEV AWS_REGION=us-east-1 MCP_URL=http://localhost:$LOCAL_MCP_PORT/mcp agentcore dev --agent SiteAgent --no-traces --port $LOCAL_AGENT_PORT",
+]
 depends = ["ac-gen"]
+
+[tasks.ac-deploy-dev]
+description = "🚀 Deploy every runtime of the project to the dev target (stack AgentCore-<project>-dev); changes AWS"
+run = "AWS_PROFILE=$AWS_PROFILE_FOR_DEV agentcore deploy --target dev"
+depends = ["ac-gen"]
+
+[tasks.ac-invoke-dev-agent]
+description = "🤖 Ask the deployed dev SiteAgent the demo question"
+run = """
+AWS_PROFILE=$AWS_PROFILE_FOR_DEV agentcore invoke --target dev --runtime SiteAgent \
+  --payload '{"prompt": "Can we send someone to inspect the turbines at site S-03 tomorrow? Who is assigned there?"}'
+"""
 
 # Documentation
 [tasks.build-doc]

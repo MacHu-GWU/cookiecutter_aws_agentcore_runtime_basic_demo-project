@@ -10,7 +10,16 @@ from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import (
     strip_thinking,
 )
 from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import (
-    get_mcp_url,
+    MCP_ARN_ENV_VAR,
+)
+from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import (
+    AwsSigV4Auth,
+)
+from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import (
+    get_runtime_mcp_url,
+)
+from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import (
+    get_mcp_connection,
 )
 from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import make_agent
 from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import app
@@ -23,6 +32,7 @@ import time
 import socket
 import threading
 
+import httpx
 import uvicorn
 
 from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes import site_agent
@@ -63,11 +73,47 @@ def test_strip_thinking():
     assert strip_thinking("plain") == "plain"
 
 
-def test_get_mcp_url(monkeypatch):
+RUNTIME_ARN = "arn:aws:bedrock-agentcore:us-east-1:111122223333:runtime/AcRtDemo_dev_PowerPlantMcp-abc"
+
+
+def test_aws_sigv4_auth(monkeypatch):
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "AKIDEXAMPLE")
+    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "secret")
+    monkeypatch.delenv("AWS_SESSION_TOKEN", raising=False)
+    monkeypatch.delenv("AWS_PROFILE", raising=False)
+    auth = AwsSigV4Auth("us-east-1")
+    request = httpx.Request("POST", get_runtime_mcp_url(RUNTIME_ARN), content=b"{}")
+    signed = next(auth.auth_flow(request))
+    assert signed.headers["Authorization"].startswith(
+        "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/"
+    )
+    assert (
+        "/us-east-1/bedrock-agentcore/aws4_request" in signed.headers["Authorization"]
+    )
+    assert "X-Amz-Date" in signed.headers
+
+
+def test_get_runtime_mcp_url():
+    assert get_runtime_mcp_url(RUNTIME_ARN) == (
+        "https://bedrock-agentcore.us-east-1.amazonaws.com/runtimes/"
+        "arn%3Aaws%3Abedrock-agentcore%3Aus-east-1%3A111122223333"
+        "%3Aruntime%2FAcRtDemo_dev_PowerPlantMcp-abc/invocations?qualifier=DEFAULT"
+    )
+
+
+def test_get_mcp_connection(monkeypatch):
     monkeypatch.delenv("MCP_URL", raising=False)
-    assert get_mcp_url() == LOCAL_MCP_URL
+    monkeypatch.delenv(MCP_ARN_ENV_VAR, raising=False)
+    assert get_mcp_connection() == (LOCAL_MCP_URL, None)
+
+    monkeypatch.setenv(MCP_ARN_ENV_VAR, RUNTIME_ARN)
+    url, auth = get_mcp_connection()
+    assert url == get_runtime_mcp_url(RUNTIME_ARN)
+    assert isinstance(auth, AwsSigV4Auth)
+    assert auth.region == "us-east-1"
+
     monkeypatch.setenv("MCP_URL", "http://example.com/mcp")
-    assert get_mcp_url() == "http://example.com/mcp"
+    assert get_mcp_connection() == ("http://example.com/mcp", None)
 
 
 def test_make_agent(monkeypatch, mcp_url):
@@ -98,8 +144,10 @@ class FakeAgent:
 
 
 def test_invoke(monkeypatch):
+    monkeypatch.delenv("MCP_URL", raising=False)
+    monkeypatch.delenv(MCP_ARN_ENV_VAR, raising=False)
     fake_agent = FakeAgent()
-    monkeypatch.setattr(site_agent, "make_agent", lambda mcp_url: fake_agent)
+    monkeypatch.setattr(site_agent, "make_agent", lambda *args: fake_agent)
     assert invoke({"prompt": "hi"}) == {"result": "answer to hi"}
     assert fake_agent.cleaned is True
 
