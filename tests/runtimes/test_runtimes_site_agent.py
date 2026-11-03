@@ -119,7 +119,7 @@ def test_get_mcp_connection(monkeypatch):
 def test_make_agent(monkeypatch, mcp_url):
     """The agent loads the MCP tools over HTTP; no LLM call is made."""
     monkeypatch.setenv("AWS_REGION", "us-east-1")
-    agent = make_agent(mcp_url)
+    agent = make_agent("us.amazon.nova-2-lite-v1:0", mcp_url)
     try:
         assert sorted(agent.tool_names) == [
             "get_site",

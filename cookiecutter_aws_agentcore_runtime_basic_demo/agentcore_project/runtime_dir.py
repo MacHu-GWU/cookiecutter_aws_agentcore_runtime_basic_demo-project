@@ -7,8 +7,9 @@ which ``agentcore build`` / ``agentcore deploy`` zip:
 - ``main.py``: a shim that calls ``main()`` of the runtime module.
 - ``pyproject.toml``: ``[project].dependencies`` = the ``agentcore`` dependency group,
   pinned by ``uv.lock``. The CLI installs only this list and ignores ``uv.lock``.
-- a copy of the package, only the subpackages the runtimes need, which never import
-  config, ``one``, or cdk.
+- a copy of the package, only the modules and subpackages the runtimes need:
+  the business code, the runtimes, and ``one`` with the config, which read the
+  config from SSM there. Never ``cdk/`` or ``agentcore_project/``.
 
 The directory is a build output (git-ignored); the package and ``uv.lock`` stay the
 only sources of code and dependencies.
@@ -25,8 +26,13 @@ from ..paths import PACKAGE_NAME
 from ..paths import path_enum
 from .project_files import RUNTIME_PYTHON
 
-#: Subpackages copied into every runtime; everything they import must be in this list.
-RUNTIME_SUBPACKAGES = ["power_plant", "runtimes"]
+#: Top-level modules of the package copied into every runtime.
+RUNTIME_MODULES = ["__init__.py", "constants.py", "env.py", "paths.py", "runtime.py"]
+
+#: Subpackages copied into every runtime. Everything the copied code imports at
+#: module level must be copied too, or be in the ``agentcore`` dependency group;
+#: ``one`` imports its CDK and dev-only dependencies inside functions.
+RUNTIME_SUBPACKAGES = ["config", "one", "power_plant", "runtimes"]
 
 #: ``main.py`` of a runtime. AgentCore Runtime runs it as a script (``python main.py``);
 #: ``agentcore dev`` does too for an MCP server, but serves an agent (protocol ``HTTP``)
@@ -120,7 +126,8 @@ def assemble_runtime_dir(
     (dir_runtime / "main.py").write_text(main_py, encoding="utf-8")
     pyproject_toml = render_pyproject_toml(name, requirements)
     (dir_runtime / "pyproject.toml").write_text(pyproject_toml, encoding="utf-8")
-    shutil.copy(path_enum.dir_package / "__init__.py", dir_package / "__init__.py")
+    for module_name in RUNTIME_MODULES:
+        shutil.copy(path_enum.dir_package / module_name, dir_package / module_name)
     for subpackage in RUNTIME_SUBPACKAGES:
         shutil.copytree(
             path_enum.dir_package / subpackage,

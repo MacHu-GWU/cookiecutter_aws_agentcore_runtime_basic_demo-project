@@ -93,8 +93,11 @@ mise = [
 agentcore = [
     "aws-opentelemetry-distro>=0.22.0,<1.0.0", # AgentCore observability; in the CLI templates
     "bedrock-agentcore[strands-agents]>=1.25.2,<2.0.0", # BedrockAgentCoreApp, the agent runtime's HTTP server
+    "boto-session-manager>=2.1.1,<3.0.0", # one.bsm, the runtime's boto session
     "botocore[crt]>=1.43.0,<2.0.0", # in the CLI agent template; crt for SigV4 and faster transfers
     "mcp>=1.28.1,<2.0.0", # FastMCP server and client; bedrock-agentcore[strands-agents] needs mcp<2
+    "pydantic>=2.14.1,<3.0.0", # the Config model, read from SSM
+    "simple-aws-ssm-parameter-store>=0.3.0,<1.0.0", # read the config from SSM
     "strands-agents>=1.63.0,<2.0.0", # the agent framework
 ]
 

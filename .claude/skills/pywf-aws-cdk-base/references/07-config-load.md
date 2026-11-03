@@ -13,6 +13,7 @@ Seed repo: [`config/config_00_main.py`](https://github.com/MacHu-GWU/cookiecutte
 - `Config.load(env_name, runtime_name)` is the only loader the rest of the code calls (through `one.config`). It branches on the runtime (`02-runtime.md`) and calls one `load_from_<source>` class method per runtime; a runtime with no source raises `NotImplementedError`.
 - Each `load_from_<source>` method takes everything it reads from as arguments, such as `dir_config`, with a default for normal use. Tests pass their own; the method never reaches for a global it could have been given.
 - In this template only `local` has a source, `load_from_local_config_file`: the project's admin deploys from a local machine.
+- This project adds `load_from_ssm(ssm_client, name)` for the `agentcore` and `agentcore_local` runtimes: the parameter named by `CONFIG_SSM_PARAM_NAME`, written by `mise run config-deploy-<env>` (`12-cdk-mise-tasks.md`). The packaged code cannot see `config/`, and copying the config into `app/` would ship its secrets in the CodeZip. `json5` is imported inside `load_from_local_config_file`, because the runtimes do not install it.
 
 ---
 

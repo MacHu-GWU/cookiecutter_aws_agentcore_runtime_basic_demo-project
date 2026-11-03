@@ -133,16 +133,18 @@ depends = ["ac-gen"]
 
 # An explicit --port: without it, agentcore dev silently moves to the next free port
 # when the default one is taken, and the callers would reach the old server.
+# The servers run as the agentcore_local runtime and read the config from SSM with the
+# profile of ENV_NAME (agentcore/.env.local, written by ac-gen): run config-deploy-<env> first.
 [tasks.ac-dev-mcp]
-description = "🏗️ Run PowerPlantMcp from app/ with `agentcore dev` on :$LOCAL_MCP_PORT, as packaged (call it with ac-local-mcp-call)"
+description = "🏗️ Run PowerPlantMcp from app/ with `agentcore dev` on :$LOCAL_MCP_PORT, as packaged, config from SSM (call it with ac-local-mcp-call)"
 run = [
     ".venv/bin/python .mise/tasks/free-port.py --port $LOCAL_MCP_PORT",
-    "agentcore dev --agent PowerPlantMcp --no-traces --port $LOCAL_MCP_PORT",
+    "AWS_REGION=us-east-1 agentcore dev --agent PowerPlantMcp --no-traces --port $LOCAL_MCP_PORT",
 ]
 depends = ["ac-gen"]
 
 [tasks.ac-dev-agent]
-description = "🏗️ Run SiteAgent from app/ with `agentcore dev` on :$LOCAL_AGENT_PORT with the dev profile (needs ac-dev-mcp; call it with ac-local-agent-call)"
+description = "🏗️ Run SiteAgent from app/ with `agentcore dev` on :$LOCAL_AGENT_PORT with the dev profile, config from SSM (needs ac-dev-mcp; call it with ac-local-agent-call)"
 run = [
     ".venv/bin/python .mise/tasks/free-port.py --port $LOCAL_AGENT_PORT",
     "AWS_PROFILE=$AWS_PROFILE_FOR_DEV AWS_REGION=us-east-1 MCP_URL=http://localhost:$LOCAL_MCP_PORT/mcp agentcore dev --agent SiteAgent --no-traces --port $LOCAL_AGENT_PORT",

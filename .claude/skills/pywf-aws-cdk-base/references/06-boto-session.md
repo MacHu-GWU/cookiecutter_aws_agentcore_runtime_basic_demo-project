@@ -20,6 +20,8 @@ Seed repo: [`one/one_02_boto_ses.py`](https://github.com/MacHu-GWU/cookiecutter_
 | :--- | :--- |
 | `local`, with `AWS_PROFILE_FOR_<ENV>` set | that named profile |
 | `local` without it, and `ci` | the default credential chain |
+| `agentcore_local` (this project) | as `local` |
+| `agentcore` (this project) | the default credential chain: the runtime's execution role |
 
 `AWS_PROFILE_FOR_<ENV>` (from `get_aws_profile_env_var(env_name)`) is set in the git-ignored `.env`, because profile names differ per person; `.env.example` lists one per environment with a placeholder value. Never put a profile name in a committed file.
 
@@ -27,4 +29,4 @@ Seed repo: [`one/one_02_boto_ses.py`](https://github.com/MacHu-GWU/cookiecutter_
 
 ## 3. Region and account
 
-The region is `one.config.aws_region`, so the session depends on the loaded config. The account is `one.config.aws_account_id`, kept in a secret config file; the session's credentials must belong to it.
+The region is `one.config.aws_region`, so the session depends on the loaded config. On the two AgentCore runtimes the config is read through the session, so there the region is `AWS_REGION` instead, passed explicitly (botocore reads only `AWS_DEFAULT_REGION`). The account is `one.config.aws_account_id`, kept in a secret config file; the session's credentials must belong to it.

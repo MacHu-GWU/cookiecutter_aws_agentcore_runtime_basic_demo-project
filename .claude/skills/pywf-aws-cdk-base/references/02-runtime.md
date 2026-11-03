@@ -12,6 +12,15 @@ Seed repo: [`runtime.py`](https://github.com/MacHu-GWU/cookiecutter_aws_cdk_demo
 
 The runtime is **where** the code runs, independent of which environment it targets. `RuntimeNameEnum` lists every runtime: `local` (a developer's machine) and `ci` (a CI runner). The `CI` environment variable is the signal for `ci`; anything else is `local`.
 
+This project adds two AgentCore runtimes, checked first:
+
+| Runtime | Where | Signal |
+| :--- | :--- | :--- |
+| `agentcore` | a deployed AgentCore runtime | `IS_AGENTCORE_RUNTIME=true` (set by `envVars` in `agentcore.json`), no `LOCAL_DEV` |
+| `agentcore_local` | the packaged code in `app/<Runtime>/`, run by `agentcore dev` | `IS_AGENTCORE_RUNTIME=true` and `LOCAL_DEV` (set by the AgentCore CLI) |
+
+AgentCore documents no variable of its own for this, so the project sets `IS_AGENTCORE_RUNTIME`; the names are in `constants.py`. The `ac-local-*` tasks run the package from the repo, so they are `local`.
+
 ---
 
 ## 2. One semantic, one implementation per runtime

@@ -9,6 +9,7 @@ from __future__ import annotations
 import typing as T
 from functools import cached_property
 
+from ..runtime import RuntimeNameEnum
 from ..config.api import Config
 
 if T.TYPE_CHECKING:  # pragma: no cover
@@ -23,11 +24,20 @@ class OneConfigMixin:
     @cached_property
     def config(self: One) -> Config:
         """
-        The configuration of the current environment and runtime, loaded once on first access.
+        The configuration of the current environment and runtime, loaded once on
+        first access: from ``config/*.json5`` locally, from SSM on an AgentCore runtime.
 
         See :meth:`~cookiecutter_aws_agentcore_runtime_basic_demo.config.config_00_main.Config.load`.
         """
+        runtime_name = self.runtime.current_runtime_name()
+        ssm_client = None
+        if runtime_name in (
+            RuntimeNameEnum.agentcore.value,
+            RuntimeNameEnum.agentcore_local.value,
+        ):
+            ssm_client = self.ssm_client
         return Config.load(
             env_name=self.env.current_env_name,
-            runtime_name=self.runtime.current_runtime_name(),
+            runtime_name=runtime_name,
+            ssm_client=ssm_client,
         )

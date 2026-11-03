@@ -17,6 +17,17 @@ import subprocess
 
 from cookiecutter_aws_agentcore_runtime_basic_demo.paths import PACKAGE_NAME
 
+#: Run in a subprocess before importing the copied code: the dev-machine-only
+#: packages cannot be imported, as in a runtime, which does not install them.
+BLOCK_DEV_PACKAGES = """
+import sys, importlib.abc
+class Block(importlib.abc.MetaPathFinder):
+    def find_spec(self, name, path=None, target=None):
+        if name.split(".")[0] in ("aws_cdk", "cdk_mate", "json5"):
+            raise ImportError(f"{name} is not installed in a runtime")
+sys.meta_path.insert(0, Block())
+"""
+
 
 def test_export_requirements():
     """Only the agentcore group, pinned; none of the dev-machine dependencies."""
@@ -44,7 +55,10 @@ def test_render_pyproject_toml():
 
 
 def test_assemble_runtime_dir(tmp_path):
-    """The copied code imports on its own: nothing outside the copied subpackages."""
+    """
+    The copied code imports on its own: nothing outside the copied modules, and
+    no dev-machine-only package.
+    """
     dir_runtime = tmp_path / "SiteAgent"
     path_stale = dir_runtime / PACKAGE_NAME / "stale.py"
     path_stale.parent.mkdir(parents=True)
@@ -65,10 +79,11 @@ def test_assemble_runtime_dir(tmp_path):
     assert "runtimes.site_agent import main\n" in main_py
     assert "runtimes.site_agent import app\n" in main_py
     assert 'if __name__ == "__main__":' in main_py
-    code = (
+    code = BLOCK_DEV_PACKAGES + (
         f"import sys, json; sys.path.insert(0, {str(dir_runtime)!r}); "
         f"import {PACKAGE_NAME}.runtimes.site_agent as m; "
         f"import {PACKAGE_NAME}.runtimes.power_plant_mcp; "
+        f"from {PACKAGE_NAME}.one.api import one; "
         "print(m.__file__); "
         f"print(json.dumps([k for k in sys.modules if k.startswith('{PACKAGE_NAME}.')]))"
     )
@@ -80,8 +95,10 @@ def test_assemble_runtime_dir(tmp_path):
     )
     lines = result.stdout.splitlines()
     assert lines[0].startswith(str(dir_runtime))
+    allowed = ["config", "one", "power_plant", "runtimes"]
+    allowed += ["constants", "env", "paths", "runtime"]
     for name in json.loads(lines[1]):
-        assert name.split(".")[1] in ["power_plant", "runtimes"]
+        assert name.split(".")[1] in allowed
 
 
 if __name__ == "__main__":

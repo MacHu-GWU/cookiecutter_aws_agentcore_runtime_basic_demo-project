@@ -13,8 +13,17 @@ def test_main(monkeypatch, tmp_path):
     monkeypatch.setattr(
         path_enum, "path_aws_targets_json", tmp_path / "aws-targets.json"
     )
+    monkeypatch.setattr(
+        path_enum, "path_runtime_env_json", tmp_path / "runtime-env.json"
+    )
+    monkeypatch.setattr(path_enum, "path_agentcore_env_local", tmp_path / ".env.local")
     monkeypatch.setattr(path_enum, "dir_agentcore_app", tmp_path / "app")
+    monkeypatch.setenv("ENV_NAME", "tst")
     main()
+    runtime_env = json.loads((tmp_path / "runtime-env.json").read_text())
+    assert list(runtime_env) == ["dev", "tst", "prd"]
+    # .env.local is for the current environment
+    assert "ENV_NAME=tst\n" in (tmp_path / ".env.local").read_text()
     targets = json.loads((tmp_path / "aws-targets.json").read_text())
     assert [target["name"] for target in targets] == ["dev", "tst", "prd"]
     assert (tmp_path / "app" / "PowerPlantMcp" / "main.py").exists()

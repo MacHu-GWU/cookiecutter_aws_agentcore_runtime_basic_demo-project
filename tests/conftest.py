@@ -12,11 +12,13 @@ from cookiecutter_aws_agentcore_runtime_basic_demo.config.api import Config
 @pytest.fixture(autouse=True)
 def local_runtime(monkeypatch):
     """
-    Run every test as the local runtime, the only one that can load the config,
-    even on a CI runner (which sets ``CI``), and in the ``dev`` environment,
+    Run every test as the local runtime, which loads the config from the local
+    files, even on a CI runner (which sets ``CI``), and in the ``dev`` environment,
     whatever ``ENV_NAME`` the shell or ``.env`` sets.
     """
     monkeypatch.delenv("CI", raising=False)
+    monkeypatch.delenv("IS_AGENTCORE_RUNTIME", raising=False)
+    monkeypatch.delenv("LOCAL_DEV", raising=False)
     monkeypatch.setenv("ENV_NAME", "dev")
 
 
@@ -51,4 +53,5 @@ def config() -> Config:
         aws_region="us-east-1",
         log_level="DEBUG",
         agentcore_project_name="MyProject",
+        site_agent_model_id="us.amazon.nova-2-lite-v1:0",
     )

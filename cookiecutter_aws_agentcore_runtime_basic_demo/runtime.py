@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Runtime detection: where this code is running (a developer's machine or CI).
+Runtime detection: where this code is running (a developer's machine, CI, a
+deployed AgentCore runtime, or ``agentcore dev``).
 
 Some behavior differs by runtime. For example, locally the AWS credentials come
 from a named profile, while in CI they come from environment variables or an
@@ -21,6 +22,9 @@ from __future__ import annotations
 import os
 import enum
 
+from .constants import IS_AGENTCORE_RUNTIME_VAR
+from .constants import AGENTCORE_DEV_VAR
+
 
 class RuntimeNameEnum(enum.Enum):
     """
@@ -31,6 +35,10 @@ class RuntimeNameEnum(enum.Enum):
     local = "local"
     #: A CI/CD runner, such as GitHub Actions.
     ci = "ci"
+    #: A deployed AgentCore runtime.
+    agentcore = "agentcore"
+    #: The packaged runtime code in ``app/<Runtime>/``, run by ``agentcore dev`` on a developer's machine.
+    agentcore_local = "agentcore_local"
 
 
 class Runtime:
@@ -42,12 +50,21 @@ class Runtime:
 
     def get_current_runtime_name(self) -> RuntimeNameEnum:
         """
-        Work out the current runtime.
+        Work out the current runtime, checking in this order:
 
-        The ``CI`` environment variable counts as the signal, because GitHub Actions
-        and most other CI services set it on every runner.
+        1. :data:`~cookiecutter_aws_agentcore_runtime_basic_demo.constants.IS_AGENTCORE_RUNTIME_VAR`
+           is ``"true"``: ``agentcore_local`` if
+           :data:`~cookiecutter_aws_agentcore_runtime_basic_demo.constants.AGENTCORE_DEV_VAR`
+           is also set, otherwise ``agentcore``.
+        2. ``CI`` is set: ``ci``. GitHub Actions and most other CI services set it on every runner.
+        3. Otherwise ``local``, including the ``ac-local-*`` tasks, which run the
+           package from the repo.
         """
-        if "CI" in os.environ:
+        if os.environ.get(IS_AGENTCORE_RUNTIME_VAR) == "true":
+            if AGENTCORE_DEV_VAR in os.environ:
+                return RuntimeNameEnum.agentcore_local
+            return RuntimeNameEnum.agentcore
+        elif "CI" in os.environ:
             return RuntimeNameEnum.ci
         else:
             return RuntimeNameEnum.local

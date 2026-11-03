@@ -35,24 +35,37 @@ class OneBotoSesMixin:
     """
 
     @cached_property
-    def bsm(self: One) -> BotoSesManager:  # pragma: no cover
+    def bsm(self: One) -> BotoSesManager:
         """
-        The boto session of the current environment, in the region of its config;
-        creating it makes no AWS call.
+        The boto session of the current environment; creating it makes no AWS call.
 
-        On the local runtime it uses the profile ``AWS_PROFILE_FOR_<ENV>`` of the
-        current environment when that is set. Otherwise it follows the standard
-        credential chain, as a CI runner would.
+        - Region: that of the config, except on the AgentCore runtimes, which
+          read the config through this session: there it is ``AWS_REGION``, set
+          by AgentCore and by ``agentcore dev``. botocore itself reads only
+          ``AWS_DEFAULT_REGION``, so it is passed explicitly.
+        - Credentials: on the local and ``agentcore_local`` runtimes, the profile
+          ``AWS_PROFILE_FOR_<ENV>`` of the current environment when that is set.
+          Otherwise the standard credential chain, as a CI runner or a deployed
+          AgentCore runtime (its execution role) would.
         """
-        region_name = self.config.aws_region
-        if self.runtime.current_runtime_name() == RuntimeNameEnum.local.value:
+        runtime_name = self.runtime.current_runtime_name()
+        kwargs = {}
+        if runtime_name in (
+            RuntimeNameEnum.agentcore.value,
+            RuntimeNameEnum.agentcore_local.value,
+        ):
+            kwargs["region_name"] = os.environ.get("AWS_REGION")
+        else:
+            kwargs["region_name"] = self.config.aws_region
+        if runtime_name in (
+            RuntimeNameEnum.local.value,
+            RuntimeNameEnum.agentcore_local.value,
+        ):
             env_var = get_aws_profile_env_var(self.env.current_env_name)
             profile_name = os.environ.get(env_var, "")
             if profile_name:
-                return BotoSesManager(
-                    profile_name=profile_name, region_name=region_name
-                )
-        return BotoSesManager(region_name=region_name)
+                kwargs["profile_name"] = profile_name
+        return BotoSesManager(**kwargs)
 
     @cached_property
     def boto_ses(self: One) -> boto3.Session:  # pragma: no cover

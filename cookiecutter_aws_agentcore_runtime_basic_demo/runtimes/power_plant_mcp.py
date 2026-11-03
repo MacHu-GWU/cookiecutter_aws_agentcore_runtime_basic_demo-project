@@ -13,6 +13,7 @@ import os
 
 from mcp.server.fastmcp import FastMCP
 
+from ..one.api import one
 from ..power_plant import queries
 
 #: The FastMCP server; each tool's description is the query function's docstring.
@@ -31,8 +32,13 @@ mcp.tool()(queries.get_technician)
 
 def main():
     """
-    Run the server over streamable HTTP, blocking until stopped.
+    Load the config, then run the server over streamable HTTP, blocking until stopped.
+    A runtime that cannot read its config fails here, at startup.
     """
+    print(
+        f"Loaded the config of {one.config.env_name!r} "
+        f"on runtime {one.runtime.current_runtime_name()!r}"
+    )
     mcp.run(transport="streamable-http")
 
 

@@ -25,10 +25,8 @@ from strands import tool
 from strands.models import BedrockModel
 from strands.tools.mcp import MCPClient
 
+from ..one.api import one
 from ..power_plant import weather
-
-#: The LLM, a Bedrock cross-region inference profile.
-MODEL_ID = "us.amazon.nova-2-lite-v1:0"
 
 #: The PowerPlantMcp URL when nothing else is set: ``agentcore dev`` without ``--port``.
 #: The ``ac-local-*`` and ``ac-dev-*`` mise tasks set ``MCP_URL`` to their own port.
@@ -53,6 +51,17 @@ _RESPONSE_TAG_PATTERN = re.compile(r"</?response>")
 
 #: The agent's own tool; its description is the docstring of the business function.
 get_weather = tool(weather.get_weather)
+
+
+def print_config_source():
+    """
+    Load the config, and print where it came from; a runtime that cannot read
+    its config fails here, at startup.
+    """
+    print(
+        f"Loaded the config of {one.config.env_name!r} "
+        f"on runtime {one.runtime.current_runtime_name()!r}"
+    )
 
 
 def strip_thinking(text: str) -> str:
@@ -122,13 +131,17 @@ def get_mcp_connection() -> tuple[str, httpx.Auth | None]:
     return LOCAL_MCP_URL, None
 
 
-def make_agent(mcp_url: str, mcp_auth: httpx.Auth | None = None) -> Agent:
+def make_agent(
+    model_id: str,
+    mcp_url: str,
+    mcp_auth: httpx.Auth | None = None,
+) -> Agent:
     """
-    Create the agent, connected to the MCP server at ``mcp_url``.
-    Call ``agent.cleanup()`` when done, to close the MCP connection.
+    Create the agent on the Bedrock model ``model_id``, connected to the MCP
+    server at ``mcp_url``. Call ``agent.cleanup()`` when done, to close the MCP connection.
     """
     return Agent(
-        model=BedrockModel(model_id=MODEL_ID),
+        model=BedrockModel(model_id=model_id),
         system_prompt=SYSTEM_PROMPT,
         tools=[get_weather, MCPClient(url=mcp_url, auth_provider=mcp_auth)],
         callback_handler=None,
@@ -142,8 +155,9 @@ app = BedrockAgentCoreApp()
 def invoke(payload: dict) -> dict:
     """
     Answer ``payload["prompt"]``; returns ``{"result": <answer text>}``.
+    The model is ``site_agent_model_id`` of the config, loaded on the first call.
     """
-    agent = make_agent(*get_mcp_connection())
+    agent = make_agent(one.config.site_agent_model_id, *get_mcp_connection())
     try:
         result = agent(payload["prompt"])
     finally:
@@ -153,8 +167,11 @@ def invoke(payload: dict) -> dict:
 
 def main():
     """
-    Run the agent's HTTP server on port 8080, blocking until stopped.
+    Load the config, then run the agent's HTTP server on port 8080, blocking
+    until stopped. ``agentcore dev`` serves ``app`` with uvicorn instead, so
+    there the config is loaded on the first request.
     """
+    print_config_source()
     app.run()
 
 

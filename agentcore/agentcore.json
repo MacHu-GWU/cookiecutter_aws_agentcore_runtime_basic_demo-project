@@ -9,7 +9,13 @@
       "entrypoint": "main.py",
       "codeLocation": "app/PowerPlantMcp",
       "runtimeVersion": "PYTHON_3_12",
-      "protocol": "MCP"
+      "protocol": "MCP",
+      "envVars": [
+        {
+          "name": "IS_AGENTCORE_RUNTIME",
+          "value": "true"
+        }
+      ]
     },
     {
       "name": "SiteAgent",
@@ -17,7 +23,13 @@
       "entrypoint": "main.py",
       "codeLocation": "app/SiteAgent",
       "runtimeVersion": "PYTHON_3_12",
-      "protocol": "HTTP"
+      "protocol": "HTTP",
+      "envVars": [
+        {
+          "name": "IS_AGENTCORE_RUNTIME",
+          "value": "true"
+        }
+      ]
     }
   ]
 }

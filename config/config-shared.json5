@@ -6,4 +6,6 @@
   // The AgentCore CLI project name: a letter, then letters and digits, at most 23 characters.
   // Every AgentCore resource name starts with it, such as AcRtDemo_dev_PowerPlantMcp.
   agentcore_project_name: "AcRtDemo",
+  // The Bedrock model (or cross-region inference profile) of the SiteAgent; override it per environment if needed.
+  site_agent_model_id: "us.amazon.nova-2-lite-v1:0",
 }
