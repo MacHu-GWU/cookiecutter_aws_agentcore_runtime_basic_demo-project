@@ -90,7 +90,10 @@ mise = [
 # without the base dependencies above, which stay on the dev machine (aws-cdk-lib and others).
 agentcore = [
     "aws-opentelemetry-distro>=0.22.0,<1.0.0", # AgentCore observability; in the CLI templates
-    "mcp>=1.28.1,<2.0.0", # FastMCP server; bedrock-agentcore[strands-agents] needs mcp<2
+    "bedrock-agentcore[strands-agents]>=1.25.2,<2.0.0", # BedrockAgentCoreApp, the agent runtime's HTTP server
+    "botocore[crt]>=1.43.0,<2.0.0", # in the CLI agent template; crt for SigV4 and faster transfers
+    "mcp>=1.28.1,<2.0.0", # FastMCP server and client; bedrock-agentcore[strands-agents] needs mcp<2
+    "strands-agents>=1.63.0,<2.0.0", # the agent framework
 ]
 
 [project.urls]

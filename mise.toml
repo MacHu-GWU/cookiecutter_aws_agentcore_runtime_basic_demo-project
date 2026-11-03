@@ -91,6 +91,19 @@ depends = ["inst"]
 description = "🔌 Call the local PowerPlantMcp server (start it first with ac-local-mcp): list tools, get site S-03"
 run = ".venv/bin/python .mise/tasks/ac-local-mcp-call.py"
 
+[tasks.ac-local-agent]
+description = "🤖 Run the SiteAgent agent locally on http://localhost:8080 (needs ac-local-mcp running, and Bedrock access with the dev profile)"
+run = "AWS_PROFILE=$AWS_PROFILE_FOR_DEV AWS_REGION=us-east-1 .venv/bin/python -m cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent"
+depends = ["inst"]
+
+[tasks.ac-local-agent-call]
+description = "🤖 Ask the local SiteAgent the demo question (start ac-local-mcp and ac-local-agent first)"
+run = """
+curl -s -X POST http://localhost:8080/invocations -H 'Content-Type: application/json' \
+  -d '{"prompt": "Can we send someone to inspect the turbines at site S-03 tomorrow? Who is assigned there?"}'
+echo
+"""
+
 # Documentation
 [tasks.build-doc]
 description = "📚 Build Sphinx documentation using sphinx-build (generates HTML in docs/build/html/)"
