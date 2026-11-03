@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
 from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.runtime_dir import (
+    check_codezip_install,
+)
+from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.runtime_dir import (
     export_requirements,
 )
 from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.runtime_dir import (
@@ -99,6 +102,20 @@ def test_assemble_runtime_dir(tmp_path):
     allowed += ["constants", "env", "paths", "runtime"]
     for name in json.loads(lines[1]):
         assert name.split(".")[1] in allowed
+
+
+def test_check_codezip_install(tmp_path):
+    """
+    The locked dependencies install as ``agentcore deploy`` installs them; a
+    version published without wheels (SQLAlchemy 2.1.7) does not.
+    """
+    path = tmp_path / "pyproject.toml"
+    path.write_text(render_pyproject_toml("SiteAgent", export_requirements()))
+    assert check_codezip_install(path) is None
+    path.write_text(render_pyproject_toml("SiteAgent", ["sqlalchemy==2.1.7"]))
+    error = check_codezip_install(path)
+    assert "aarch64-manylinux_2_34" in error
+    assert "sqlalchemy" in error
 
 
 if __name__ == "__main__":

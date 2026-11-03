@@ -242,6 +242,7 @@ echo '--- CloudFormation console ---'
 echo 'AgentCore stack: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=AgentCore-AcRtDemo-dev&filteringStatus=active&viewNested=true'
 .venv/bin/python .mise/tasks/ac-check-deps.py
 .venv/bin/python .mise/tasks/ac-gen.py
+.venv/bin/python .mise/tasks/ac-check-wheels.py
 echo '--- Run command ---'
 echo 'AWS_PROFILE={{env.AWS_PROFILE_FOR_DEV}} agentcore deploy --target dev'
 AWS_PROFILE={{env.AWS_PROFILE_FOR_DEV}} agentcore deploy --target dev
@@ -484,6 +485,7 @@ echo '--- CloudFormation console ---'
 echo 'AgentCore stack: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=AgentCore-AcRtDemo-tst&filteringStatus=active&viewNested=true'
 .venv/bin/python .mise/tasks/ac-check-deps.py
 .venv/bin/python .mise/tasks/ac-gen.py
+.venv/bin/python .mise/tasks/ac-check-wheels.py
 echo '--- Run command ---'
 echo 'AWS_PROFILE={{env.AWS_PROFILE_FOR_TST}} agentcore deploy --target tst'
 AWS_PROFILE={{env.AWS_PROFILE_FOR_TST}} agentcore deploy --target tst
@@ -726,6 +728,7 @@ echo '--- CloudFormation console ---'
 echo 'AgentCore stack: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=AgentCore-AcRtDemo-prd&filteringStatus=active&viewNested=true'
 .venv/bin/python .mise/tasks/ac-check-deps.py
 .venv/bin/python .mise/tasks/ac-gen.py
+.venv/bin/python .mise/tasks/ac-check-wheels.py
 echo '--- Run command ---'
 echo 'AWS_PROFILE={{env.AWS_PROFILE_FOR_PRD}} agentcore deploy --target prd'
 AWS_PROFILE={{env.AWS_PROFILE_FOR_PRD}} agentcore deploy --target prd

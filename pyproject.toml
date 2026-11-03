@@ -43,7 +43,7 @@ dependencies = [
     "json5>=0.17.3,<1.0.0", # parse the config/*.json5 files (comments allowed)
     "pydantic>=2.14.1,<3.0.0", # validate the Config model
     "simple-aws-ssm-parameter-store>=0.3.0,<1.0.0", # write the config to SSM only when it changed
-    "sqlalchemy>=2.0.0,<3.0.0", # the power plant database, one.engine
+    "sqlalchemy>=2.0.0,<2.1.0", # the power plant database, one.engine; 2.1.7 is on PyPI without wheels, and the runtimes install wheels only
 ]
 
 # --- Optional dependencies (extras) ---
@@ -99,7 +99,7 @@ agentcore = [
     "mcp>=1.28.1,<2.0.0", # FastMCP server and client; bedrock-agentcore[strands-agents] needs mcp<2
     "pydantic>=2.14.1,<3.0.0", # the Config model, read from SSM
     "simple-aws-ssm-parameter-store>=0.3.0,<1.0.0", # read the config from SSM
-    "sqlalchemy>=2.0.0,<3.0.0", # the power plant database, one.engine
+    "sqlalchemy>=2.0.0,<2.1.0", # the power plant database, one.engine; 2.1.7 is on PyPI without wheels, and the runtimes install wheels only
     "strands-agents>=1.63.0,<2.0.0", # the agent framework
 ]
 

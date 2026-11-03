@@ -8,8 +8,8 @@ of the stacks it acts on, then runs one plain cdk command in ``cdk/`` with
 ``ENV_NAME`` and ``--profile {{env.AWS_PROFILE_FOR_<ENV>}}``. See the ``pywf-aws-cdk-base`` skill, ``12-cdk-mise-tasks.md``.
 Per environment it also renders ``config-deploy-<env>``, ``config-delete-<env>``,
 and ``ac-deploy-<env>`` (after deploying the config: check that the
-``agentcore_deps`` stack is deployed, run ``ac-gen`` for ``<env>``, then
-``agentcore deploy``), and
+``agentcore_deps`` stack is deployed, run ``ac-gen`` for ``<env>``, check the
+runtimes' dependencies have Linux wheels, then ``agentcore deploy``), and
 then ``config-deploy-all`` and ``config-delete-all``.
 
 The stacks are the entries of :class:`~cookiecutter_aws_agentcore_runtime_basic_demo.cdk.stack_ctx_enum.StackCtxEnum`,
@@ -251,6 +251,7 @@ def _render_env_tasks(env_name: str, agentcore_target: StackTarget) -> str:
             f"echo 'AgentCore stack: {agentcore_target.console_url}'",
             ".venv/bin/python .mise/tasks/ac-check-deps.py",
             ".venv/bin/python .mise/tasks/ac-gen.py",
+            ".venv/bin/python .mise/tasks/ac-check-wheels.py",
             "echo '--- Run command ---'",
             f"echo '{deploy_command}'",
             deploy_command,
