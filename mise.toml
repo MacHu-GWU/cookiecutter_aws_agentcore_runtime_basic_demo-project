@@ -21,6 +21,7 @@ pandoc = "3.9" # Use pandoc 3.9 - latest stable major version as of 2026-04
 node = "24" # runtime of the cdk CLI and of aws-cdk-lib (jsii)
 awscli = "2.34.24"
 "npm:aws-cdk" = "2.1145.0" # the cdk CLI; must be new enough for the aws-cdk-lib in uv.lock
+"npm:@aws/agentcore" = "1.0.1" # the AgentCore CLI; deploys the agentcore/ project (Runtimes)
 
 # === Tasks ===
 # Python Environment Management
