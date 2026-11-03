@@ -190,6 +190,28 @@ class ConfigNameMixin:
         return f"arn:aws:ssm:{self.aws_region}:{self.aws_account_id}:parameter{name}"
 
     @cached_property
+    def ssm_param_name_config(self: Config) -> str:
+        """
+        Name of the parameter that holds the whole config of this environment as
+        JSON, such as ``/my-project-dev/config``; written by ``mise run config-deploy-<env>``.
+        """
+        return f"/{self.prefix_name_slug}/config"
+
+    @cached_property
+    def ssm_param_url_config(self: Config) -> str:
+        """
+        Console URL of :attr:`ssm_param_name_config`.
+        """
+        return self.get_ssm_param_url(self.ssm_param_name_config)
+
+    @cached_property
+    def ssm_param_arn_config(self: Config) -> str:
+        """
+        ARN of :attr:`ssm_param_name_config`.
+        """
+        return self.get_ssm_param_arn(self.ssm_param_name_config)
+
+    @cached_property
     def ssm_param_name_log_level(self: Config) -> str:
         """
         Name of the log level parameter, such as ``/my-project-dev/log-level``.

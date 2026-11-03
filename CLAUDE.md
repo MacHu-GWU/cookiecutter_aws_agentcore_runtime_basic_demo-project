@@ -38,8 +38,9 @@ This repo follows the pywf open-source Python library template. **Before creatin
 - Every resource name, ARN, and console URL is a property in `config/config_01_name.py`; a stack builds no name string.
 - Humans run `mise run cdk-<synth|plan|up|down>-<env>-<<stack>-stack|all>` (such as `cdk-up-dev-alerts-stack`, `cdk-up-dev-all`). Each task is one plain cdk command (read it in `mise.toml`). To run one yourself, call the cdk CLI from `cdk/` with the environment's name and profile, construct ID = stack name: `ENV_NAME=dev mise exec -- cdk diff cookiecutter-aws-agentcore-runtime-basic-demo-dev-alerts --exclusively --profile "$AWS_PROFILE_FOR_DEV"`.
 - `mise run print-cdk-stack-urls` lists every stack's console URL; it never fails as a whole.
-- `synth`, `plan` (diff), and `ls` change nothing. `up` (deploy) and `down` (destroy) change AWS: run them only after the user's yes, one environment per yes.
-- After changing the entries of `StackCtxEnum`, run `mise run cdk-gen-tasks`. Keep `StackCtxEnum` and `StackEnum` entries identical, one per stack (a test checks it).
+- `synth`, `plan` (diff), and `ls` change nothing. `up` (deploy), `down` (destroy), `config-deploy-*`, `config-delete-*`, and `ac-deploy-*` change AWS: run them only after the user's yes, one environment per yes.
+- The whole config of an environment is one SSM `SecureString` parameter, `config.ssm_param_name_config`, written by `mise run config-deploy-<env>` (only when it changed).
+- After changing the entries of `StackCtxEnum` or `EnvNameEnum`, run `mise run gen-env-tasks`; it also renders `config-deploy-<env>`, `config-delete-<env>`, and `ac-deploy-<env>`. Keep `StackCtxEnum` and `StackEnum` entries identical, one per stack (a test checks it).
 - `*_stack_exports.py` must import only the standard library; its stack names are literal values. `mise run int-test` checks them against the deployed stacks (needs a deploy, so ask before relying on it).
 
 ## Skills

@@ -11,6 +11,7 @@ sub packages and modules
     :maxdepth: 1
 
     gen <gen>
+    local_port <local_port>
     project_files <project_files>
     runtime_dir <runtime_dir>
     

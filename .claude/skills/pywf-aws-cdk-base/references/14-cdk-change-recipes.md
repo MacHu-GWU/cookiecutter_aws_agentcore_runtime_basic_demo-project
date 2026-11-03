@@ -15,7 +15,7 @@ Finish every recipe with section 6.
 3. An entry `<x>` in both enums, after the stacks it depends on (`10-cdk-stack-enums.md`).
 4. If it has outputs: `stacks/<x>_stack_exports.py` and its `tests_int/` test (`11-cdk-stack-exports.md`).
 5. `tests/cdk/stacks/test_cdk_stacks_<x>_stack.py`, and the expected lists in the enum tests (`13-cdk-tests.md`).
-6. `mise run cdk-gen-tasks` (`12-cdk-mise-tasks.md`).
+6. `mise run gen-env-tasks` (`12-cdk-mise-tasks.md`).
 
 ---
 
@@ -35,19 +35,19 @@ Add the resource as a named `__init__` argument of `<b>`, pass `self.<a>.<attr>`
 
 ## 4. Add an environment `<env>`
 
-The general steps are in `03-env.md`. For CDK, also add `<env>` to `STACK_NAMES` in every `*_stack_exports.py`, then run `mise run cdk-gen-tasks`. Deploy to it with the user's yes.
+The general steps are in `03-env.md`. For CDK, also add `<env>` to `STACK_NAMES` in every `*_stack_exports.py`, then run `mise run gen-env-tasks`. Deploy to it with the user's yes.
 
 ---
 
 ## 5. Remove a stack `<x>`
 
-Destroy it in every environment first, `cdk-down-<env>-<x>-stack`, with the user's yes for each environment. Then undo section 1 and run `mise run cdk-gen-tasks`.
+Destroy it in every environment first, `cdk-down-<env>-<x>-stack`, with the user's yes for each environment. Then undo section 1 and run `mise run gen-env-tasks`.
 
 ---
 
 ## 6. Checks after any change
 
-1. `mise run cdk-gen-tasks`, if the stacks or the environments changed.
+1. `mise run gen-env-tasks`, if the stacks or the environments changed.
 2. `mise run cdk-synth-<env>-all` for one environment.
 3. `mise run cov`, then `mise run format` and `mise run lint`.
 4. Optionally `mise run cdk-plan-<env>-<x>-stack` to show the diff. Deploying is a separate step, after the user's yes.

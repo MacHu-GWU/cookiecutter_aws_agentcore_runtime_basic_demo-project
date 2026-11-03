@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 
 """
-Generate the ``<cdk-stack-tasks>`` block of ``mise.toml`` (``mise run cdk-gen-tasks``):
+Generate the ``<env-tasks>`` block of ``mise.toml`` (``mise run gen-env-tasks``):
 four tasks per (environment, stack), ``cdk-<action>-<env>-<stack>-stack``, plus
 four ``cdk-<action>-<env>-all`` per environment. Each task prints the console URL
 of the stacks it acts on, then runs one plain cdk command in ``cdk/`` with
 ``ENV_NAME`` and ``--profile {{env.AWS_PROFILE_FOR_<ENV>}}``. See the ``pywf-aws-cdk-base`` skill, ``12-cdk-mise-tasks.md``.
+Per environment it also renders ``config-deploy-<env>``, ``config-delete-<env>``,
+and ``ac-deploy-<env>`` (``agentcore deploy``, after deploying the config), and
+then ``config-deploy-all`` and ``config-delete-all``.
 
 The stacks are the entries of :class:`~cookiecutter_aws_agentcore_runtime_basic_demo.cdk.stack_ctx_enum.StackCtxEnum`,
 the environments the members of :class:`~cookiecutter_aws_agentcore_runtime_basic_demo.env.EnvNameEnum`;
@@ -30,12 +33,12 @@ ALL = "all"
 The reserved stack name that targets every stack; no stack may use it.
 """
 
-BEGIN_MARKER = "# <cdk-stack-tasks>"
+BEGIN_MARKER = "# <env-tasks>"
 """
 The line that opens the generated block in ``mise.toml``.
 """
 
-END_MARKER = "# </cdk-stack-tasks>"
+END_MARKER = "# </env-tasks>"
 """
 The line that closes the generated block in ``mise.toml``.
 """
@@ -152,6 +155,18 @@ def get_stack_targets(env_name: str) -> dict[str, StackTarget]:
     }
 
 
+def get_agentcore_target(env_name: str) -> StackTarget:
+    """
+    The AgentCore stack of one environment, with the AgentCore CLI target name
+    as its construct ID. Loads the config of that environment; makes no AWS call.
+    """
+    config = Config.load_from_local_config_file(env_name=env_name)
+    return StackTarget(
+        construct_id=config.agentcore_target_name,
+        console_url=config.cft_stack_url_agentcore,
+    )
+
+
 def get_task_name(
     action_name: str,
     env_name: str,
@@ -206,6 +221,59 @@ def get_run_script(
     return "\n".join(lines)
 
 
+CONFIG_ACTIONS = ["deploy", "delete"]
+"""
+The ``config-<action>-<env>`` tasks, each runs ``.mise/tasks/config-<action>.py``.
+"""
+
+
+def get_config_task_name(action: str, env_name: str) -> str:
+    """
+    ``config-<action>-<env>``, or ``config-<action>-all`` for :data:`ALL`.
+    """
+    return f"config-{action}-{env_name}"
+
+
+def _render_env_tasks(env_name: str, agentcore_target: StackTarget) -> str:
+    """
+    The tasks of one environment that are not about one CDK stack.
+    """
+    profile_var = get_aws_profile_env_var(env_name)
+    target_name = agentcore_target.construct_id
+    deploy_command = (
+        f"AWS_PROFILE={{{{env.{profile_var}}}}} agentcore deploy --target {target_name}"
+    )
+    deploy_script = "\n".join(
+        [
+            "echo '--- CloudFormation console ---'",
+            f"echo 'AgentCore stack: {agentcore_target.console_url}'",
+            "echo '--- Run command ---'",
+            f"echo '{deploy_command}'",
+            deploy_command,
+        ]
+    )
+    config_deploy_task_name = get_config_task_name("deploy", env_name)
+    lines = [
+        f'[tasks."{config_deploy_task_name}"]',
+        f'description = "⚙️ Deploy the config of {env_name} to SSM Parameter Store, if it changed (writes to AWS)"',
+        f'env = {{ {ENV_NAME_VAR} = "{env_name}" }}',
+        'depends = ["inst"]',
+        'run = ".venv/bin/python .mise/tasks/config-deploy.py"',
+        "",
+        f'[tasks."{get_config_task_name("delete", env_name)}"]',
+        f'description = "🗑️ Delete the config of {env_name} from SSM Parameter Store (writes to AWS)"',
+        f'env = {{ {ENV_NAME_VAR} = "{env_name}" }}',
+        'depends = ["inst"]',
+        'run = ".venv/bin/python .mise/tasks/config-delete.py"',
+        "",
+        f'[tasks."ac-deploy-{env_name}"]',
+        f'description = "🚀 Deploy every AgentCore runtime to the {target_name} target, after deploying the config (writes to AWS)"',
+        f'depends = ["ac-gen", "{config_deploy_task_name}"]',
+        f'run = """\n{deploy_script}\n"""',
+    ]
+    return "\n".join(lines)
+
+
 def _render_task(
     action: CdkAction,
     env_name: str,
@@ -231,38 +299,63 @@ def _render_task(
     return "\n".join(lines)
 
 
-def render_cdk_tasks(env_stack_targets: dict[str, dict[str, StackTarget]]) -> str:
+def render_env_tasks_block(
+    env_stack_targets: dict[str, dict[str, StackTarget]],
+    env_agentcore_targets: dict[str, StackTarget],
+) -> str:
     """
     Render the whole generated block, markers included.
 
     :param env_stack_targets: for each environment, its stacks by entry name (see
-        :func:`get_stack_targets`). Tasks follow its order: by environment, then
-        the ``all`` tasks, then each stack.
+        :func:`get_stack_targets`). Tasks follow its order: by environment, its
+        config and AgentCore tasks, then the ``all`` tasks, then each stack;
+        last the ``config-<action>-all`` tasks.
+    :param env_agentcore_targets: for each environment, its AgentCore stack
+        (see :func:`get_agentcore_target`).
 
     :raises ValueError: see :func:`validate_stacks`.
     """
     parts = [
         f"{BEGIN_MARKER}\n"
-        "# Generated by `mise run cdk-gen-tasks` from StackCtxEnum. Do not edit by hand."
+        "# Generated by `mise run gen-env-tasks` from StackCtxEnum and EnvNameEnum. Do not edit by hand."
     ]
     for env_name, stack_targets in env_stack_targets.items():
         validate_stacks(list(stack_targets))
+        parts.append(_render_env_tasks(env_name, env_agentcore_targets[env_name]))
         groups = [(ALL, list(stack_targets.values()))]
         for stack, target in stack_targets.items():
             groups.append((to_stack_slug(stack), [target]))
         for stack_slug, targets in groups:
             for action in CDK_ACTIONS:
                 parts.append(_render_task(action, env_name, stack_slug, targets))
+    for action in CONFIG_ACTIONS:
+        depends = [
+            get_config_task_name(action, env_name) for env_name in env_stack_targets
+        ]
+        parts.append(
+            "\n".join(
+                [
+                    f'[tasks."{get_config_task_name(action, ALL)}"]',
+                    f'description = "⚙️ Run config-{action}-<env> for every environment (writes to AWS)"',
+                    f"depends = {depends}".replace("'", '"'),
+                ]
+            )
+        )
     parts.append(END_MARKER)
     return "\n\n".join(parts)
 
 
-def render_project_cdk_tasks() -> str:
+def render_project_env_tasks() -> str:
     """
-    :func:`render_cdk_tasks` for every stack of this project in every environment.
+    :func:`render_env_tasks_block` for every stack of this project in every environment.
     """
-    return render_cdk_tasks(
-        {member.value: get_stack_targets(member.value) for member in EnvNameEnum}
+    return render_env_tasks_block(
+        env_stack_targets={
+            member.value: get_stack_targets(member.value) for member in EnvNameEnum
+        },
+        env_agentcore_targets={
+            member.value: get_agentcore_target(member.value) for member in EnvNameEnum
+        },
     )
 
 
@@ -288,12 +381,12 @@ def print_cdk_stack_urls() -> None:
             print(f"{target.construct_id}: {target.console_url}")
 
 
-def replace_cdk_tasks_block(text: str, block: str) -> str:
+def replace_env_tasks_block(text: str, block: str) -> str:
     """
     Replace the generated block in the ``mise.toml`` text, markers included.
 
     :param text: the content of ``mise.toml``.
-    :param block: the new block, from :func:`render_cdk_tasks`.
+    :param block: the new block, from :func:`render_env_tasks_block`.
 
     :raises ValueError: the markers are missing, or the end marker comes first.
     """
@@ -314,12 +407,12 @@ def update_mise_toml(
     """
     Rewrite the generated block of the ``mise.toml`` at ``path``.
 
-    :param block: the new block, such as :func:`render_project_cdk_tasks`.
+    :param block: the new block, such as :func:`render_project_env_tasks`.
 
     :returns: ``True`` if the file changed, ``False`` if it was already up to date.
     """
     text = path.read_text(encoding="utf-8")
-    new_text = replace_cdk_tasks_block(text, block)
+    new_text = replace_env_tasks_block(text, block)
     if new_text == text:
         return False
     path.write_text(new_text, encoding="utf-8")

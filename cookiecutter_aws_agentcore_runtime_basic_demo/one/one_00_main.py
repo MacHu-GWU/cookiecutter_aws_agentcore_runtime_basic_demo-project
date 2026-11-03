@@ -30,12 +30,14 @@ from ..runtime import runtime
 from .one_01_config import OneConfigMixin
 from .one_02_boto_ses import OneBotoSesMixin
 from .one_03_cdk import OneCdkMixin
+from .one_04_devops import OneDevOpsMixin
 
 
 class One(
     OneConfigMixin,
     OneBotoSesMixin,
     OneCdkMixin,
+    OneDevOpsMixin,
 ):
     """
     Aggregates every project-level singleton. Use the module-level :data:`~cookiecutter_aws_agentcore_runtime_basic_demo.one.one_00_main.one`.

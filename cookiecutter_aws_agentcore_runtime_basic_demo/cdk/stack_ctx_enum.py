@@ -5,7 +5,7 @@ Layer 1 of the cdk_mate two-layer pattern: one :class:`~cdk_mate.stack_ctx.Stack
 per stack of the current environment, with its construct ID, stack name, account,
 region, and session (``one.bsm``). Building one creates no CDK construct and makes
 no AWS call. Layer 2, :mod:`~cookiecutter_aws_agentcore_runtime_basic_demo.cdk.stack_enum`, has an entry
-of the same name per stack; ``mise run cdk-gen-tasks`` reads the entry names.
+of the same name per stack; ``mise run gen-env-tasks`` reads the entry names.
 """
 
 from __future__ import annotations

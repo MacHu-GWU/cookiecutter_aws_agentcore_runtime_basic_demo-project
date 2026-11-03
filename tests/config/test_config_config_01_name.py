@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from cookiecutter_aws_agentcore_runtime_basic_demo.config.config_01_name import ConfigNameMixin
+from cookiecutter_aws_agentcore_runtime_basic_demo.config.config_01_name import (
+    ConfigNameMixin,
+)
 
 import pytest
 
@@ -33,6 +35,9 @@ def test_names(config: Config):
     assert config.iam_role_name_publisher == "my-project-dev-publisher"
     assert config.iam_role_arn_publisher == "arn:aws:iam::111122223333:role/my-project-dev-publisher"
     # ssm
+    assert config.ssm_param_name_config == "/my-project-dev/config"
+    assert config.ssm_param_arn_config == "arn:aws:ssm:us-east-1:111122223333:parameter/my-project-dev/config"
+    assert "/parameters/my-project-dev/config/" in config.ssm_param_url_config
     assert config.ssm_param_name_log_level == "/my-project-dev/log-level"
     assert config.ssm_param_arn_log_level == "arn:aws:ssm:us-east-1:111122223333:parameter/my-project-dev/log-level"
     assert "/parameters/my-project-dev/log-level/" in config.ssm_param_url_log_level
