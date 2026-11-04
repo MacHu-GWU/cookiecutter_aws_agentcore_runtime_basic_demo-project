@@ -1,7 +1,6 @@
 {
   "targets": {
     "dev": {
-      "stackArn": "arn:aws:cloudformation:us-east-1:361769586364:stack/AgentCore-AcRtDemo-dev/1fe37470-d7a2-11f1-a720-12ffc562c519",
       "resources": {
         "credentials": {}
       }

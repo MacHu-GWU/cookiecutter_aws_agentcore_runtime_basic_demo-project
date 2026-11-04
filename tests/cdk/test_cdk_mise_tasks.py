@@ -37,8 +37,28 @@ def test_chains():
         "cdk-down-dev-agentcore-deps-stack",
         "config-delete-dev",
     ]
-    assert "confirm" in down
-    assert "confirm" not in up
+    # the teardown chain asks yes/no once before its first step, then tells its
+    # steps not to ask again; never mise's `confirm`, which takes Enter as yes
+    assert "confirm" not in down
+    assert "raw" not in down
+    assert down["env"] == {"CONFIRMED_BY_CHAIN": "true"}
+    first_task = next(i for i, item in enumerate(down["run"]) if isinstance(item, dict))
+    question = down["run"][first_task - 1]
+    assert question.startswith(".venv/bin/python .mise/tasks/confirm.py --action ")
+    assert "CONFIRMED_BY_CHAIN" not in question
+    assert not any("confirm.py" in str(item) for item in up["run"])
+    # destructive steps ask on their own, unless a chain asked already
+    for name in ["ac-down-dev", "config-delete-dev"]:
+        assert "raw" not in tasks[name]
+        assert (
+            "--skip_var CONFIRM_YES --skip_var CONFIRMED_BY_CHAIN" in tasks[name]["run"]
+        )
+    for name in [
+        "config-deploy-dev",
+        "ac-deploy-dev",
+        "cdk-down-dev-agentcore-deps-stack",
+    ]:
+        assert "confirm.py" not in tasks[name]["run"]
     for name in [
         "config-deploy-dev",
         "ac-deploy-dev",

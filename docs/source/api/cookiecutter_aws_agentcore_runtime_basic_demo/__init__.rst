@@ -17,6 +17,7 @@ sub packages and modules
     power_plant <power_plant/__init__>
     runtimes <runtimes/__init__>
     api <api>
+    confirm <confirm>
     constants <constants>
     env <env>
     runtime <runtime>

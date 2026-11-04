@@ -25,6 +25,8 @@ from pathlib import Path
 
 from ..env import ENV_NAME_VAR
 from ..env import EnvNameEnum
+from ..confirm import CONFIRM_YES_VAR
+from ..confirm import CONFIRMED_BY_CHAIN_VAR
 from ..config.api import Config
 from ..one.api import One
 from ..one.one_02_boto_ses import get_aws_profile_env_var
@@ -257,6 +259,7 @@ class EnvStep:
     emoji: str = dataclasses.field()  #: Shown in front of the description.
     summary: str = dataclasses.field()  #: What it does; the description and the banner. No single quote.
     script: str = dataclasses.field(default="")  #: The commands after the banner; empty for a cdk task, rendered elsewhere.
+    confirm: str | None = dataclasses.field(default=None)  #: If set, the yes/no question asked before the script (``confirm.py``). No single quote.
     # fmt: on
 
 
@@ -305,6 +308,7 @@ def get_env_steps(
             emoji="🗑️",
             summary=f"Delete the config of {env_name} from SSM Parameter Store (writes to AWS)",
             script=".venv/bin/python .mise/tasks/config-delete.py",
+            confirm=f"Delete the config parameter of {env_name}?",
         ),
         "deps_up": get_cdk_step("up", env_name, deps_slug),
         "deps_down": get_cdk_step("down", env_name, deps_slug),
@@ -336,6 +340,7 @@ def get_env_steps(
                 f"empty project with --yes, then generate the real one again (writes to "
                 f"AWS; keeps the agentcore-deps stack and the config)"
             ),
+            confirm=f"Destroy every AgentCore runtime of {env_name}?",
             script="\n".join(
                 [
                     *console,
@@ -350,15 +355,31 @@ def get_env_steps(
     }
 
 
+def get_confirm_command(action: str, skip_vars: list[str]) -> str:
+    """
+    The command that asks yes or no (:mod:`~cookiecutter_aws_agentcore_runtime_basic_demo.confirm`)
+    and stops the task unless the answer is yes.
+    """
+    options = "".join(f" --skip_var {var}" for var in skip_vars)
+    return f".venv/bin/python .mise/tasks/confirm.py --action '{action}'{options}"
+
+
 def _render_step(step: EnvStep, env_name: str) -> str:
-    script = get_banner(step.name, step.summary) + "\n" + step.script
+    script = get_banner(step.name, step.summary) + "\n"
+    if step.confirm:
+        # a chain that asked already sets CONFIRMED_BY_CHAIN for its steps
+        command = get_confirm_command(
+            step.confirm, [CONFIRM_YES_VAR, CONFIRMED_BY_CHAIN_VAR]
+        )
+        script += command + "\n"
+    script += step.script
     lines = [
         f'[tasks."{step.name}"]',
         f'description = "{step.emoji} {step.summary}"',
         f'env = {{ {ENV_NAME_VAR} = "{env_name}" }}',
         'depends = ["inst"]',
-        f'run = """\n{script}\n"""',
     ]
+    lines.append(f'run = """\n{script}\n"""')
     return "\n".join(lines)
 
 
@@ -367,22 +388,29 @@ def _render_chain(
     emoji: str,
     summary: str,
     steps: list[EnvStep],
+    env_name: str,
     confirm: str | None = None,
 ) -> str:
     """
     A task that runs ``steps`` in order, and stops at the first that fails.
     It first prints the whole chain; each step then prints its own banner.
+    With ``confirm``, it then asks yes or no before any step
+    (:mod:`~cookiecutter_aws_agentcore_runtime_basic_demo.confirm`), and its steps
+    do not ask again.
     """
     lines = [
         f'[tasks."{name}"]',
         f'description = "{emoji} {summary}: ' + " → ".join(s.name for s in steps) + '"',
     ]
     if confirm:
-        lines.append(f'confirm = "{confirm}"')
+        # once answered, the steps do not ask again
+        lines.append(f'env = {{ {CONFIRMED_BY_CHAIN_VAR} = "true" }}')
     lines.append("run = [")
     lines.append(f"    \"echo '=== {name}: {summary}, in this order ==='\",")
     for i, step in enumerate(steps, start=1):
         lines.append(f"    \"echo '  {i}. {step.name}: {step.summary}'\",")
+    if confirm:
+        lines.append(f'    "{get_confirm_command(confirm, [CONFIRM_YES_VAR])}",')
     for step in steps:
         lines.append(f'    {{ task = "{step.name}" }},')
     lines.append(f"    \"echo '=== {name}: done ==='\",")
@@ -396,8 +424,10 @@ def _render_env_tasks(env_name: str, agentcore_target: StackTarget) -> str:
     AgentCore and config steps, then the two chains that run them in order:
 
     - ``ac-chain-up-<env>``: config → ``agentcore_deps`` stack → AgentCore runtimes.
-    - ``ac-chain-down-<env>``: the reverse; it asks for confirmation first
-      (``mise run --yes`` skips the prompt).
+    - ``ac-chain-down-<env>``: the reverse, after one yes/no question.
+
+    ``ac-down-<env>`` and ``config-delete-<env>`` ask on their own when run
+    alone. ``CONFIRM_YES=true`` answers every question, such as in CI.
     """
     steps = get_env_steps(env_name, agentcore_target)
     parts = [
@@ -410,6 +440,7 @@ def _render_env_tasks(env_name: str, agentcore_target: StackTarget) -> str:
             emoji="🚀",
             summary=f"Deploy everything AgentCore of {env_name}",
             steps=[steps["config_deploy"], steps["deps_up"], steps["ac_deploy"]],
+            env_name=env_name,
         )
     )
     parts.append(
@@ -418,6 +449,7 @@ def _render_env_tasks(env_name: str, agentcore_target: StackTarget) -> str:
             emoji="🔴",
             summary=f"Destroy everything AgentCore of {env_name}",
             steps=[steps["ac_down"], steps["deps_down"], steps["config_delete"]],
+            env_name=env_name,
             confirm=f"Destroy the AgentCore runtimes, the agentcore-deps stack, and the config of {env_name}?",
         )
     )

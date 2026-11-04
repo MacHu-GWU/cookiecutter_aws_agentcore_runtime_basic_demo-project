@@ -70,7 +70,7 @@ It does not deploy the config itself: that is step 1 of the chain.
 
 ## 5. The teardown chain
 
-The deploy chain in reverse; `ac-chain-down-<env>` runs all three, after asking for confirmation (`mise run --yes` skips the prompt):
+The deploy chain in reverse; `ac-chain-down-<env>` runs all three after one yes/no question, and its steps then do not ask again. `ac-down-<env>` and `config-delete-<env>` ask on their own when run alone. Only `y` or `yes` (any case) goes on; a bare Enter, anything else, or no terminal stops. `CONFIRM_YES=true` answers yes without asking, such as in CI. The question comes from `<pkg>/confirm.py`, never from mise's `confirm`, which takes a bare Enter as yes (that destroyed dev once).
 
 | # | Step task | Does |
 | :--- | :--- | :--- |

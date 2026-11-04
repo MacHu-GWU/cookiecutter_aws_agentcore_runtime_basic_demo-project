@@ -36,9 +36,9 @@ This project adds, per environment, in the same block:
 | `ac-deploy-<env>` | check that the `agentcore_deps` policy and the config exist, `ac-gen` for `<env>`, check the wheels, then `agentcore deploy --target <env>` | changes |
 | `ac-down-<env>` | `agentcore deploy --target <env> --yes` of an empty generated project (destroys its runtimes), then `ac-gen` again | changes |
 | `ac-chain-up-<env>` | `config-deploy-<env>` → `cdk-up-<env>-agentcore-deps-stack` → `ac-deploy-<env>`, in order | changes |
-| `ac-chain-down-<env>` | after a confirmation: `ac-down-<env>` → `cdk-down-<env>-agentcore-deps-stack` → `config-delete-<env>` | changes |
+| `ac-chain-down-<env>` | after one yes/no question: `ac-down-<env>` → `cdk-down-<env>-agentcore-deps-stack` → `config-delete-<env>` | changes |
 
-Every generated task first prints `>>> <task>: <what it does>`; a chain task first prints its whole chain, then runs its steps with `{ task = ... }` entries, which stop at the first failure.
+Every generated task first prints `>>> <task>: <what it does>`. A destructive task that is not a `cdk-*` one (`ac-down-<env>`, `config-delete-<env>`, `ac-chain-down-<env>`) then asks yes or no through `<pkg>/confirm.py` (only `y` or `yes` goes on; `CONFIRM_YES=true` skips it; a chain sets `CONFIRMED_BY_CHAIN=true` so its steps do not ask again); never mise's `confirm`, which takes a bare Enter as yes; a chain task first prints its whole chain, then runs its steps with `{ task = ... }` entries, which stop at the first failure.
 
 ---
 

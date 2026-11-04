@@ -240,6 +240,7 @@ env = { ENV_NAME = "dev" }
 depends = ["inst"]
 run = """
 echo '>>> config-delete-dev: Delete the config of dev from SSM Parameter Store (writes to AWS)'
+.venv/bin/python .mise/tasks/confirm.py --action 'Delete the config parameter of dev?' --skip_var CONFIRM_YES --skip_var CONFIRMED_BY_CHAIN
 .venv/bin/python .mise/tasks/config-delete.py
 """
 
@@ -265,6 +266,7 @@ env = { ENV_NAME = "dev" }
 depends = ["inst"]
 run = """
 echo '>>> ac-down-dev: Destroy every AgentCore runtime of the dev target: deploy an empty project with --yes, then generate the real one again (writes to AWS; keeps the agentcore-deps stack and the config)'
+.venv/bin/python .mise/tasks/confirm.py --action 'Destroy every AgentCore runtime of dev?' --skip_var CONFIRM_YES --skip_var CONFIRMED_BY_CHAIN
 echo '--- CloudFormation console ---'
 echo 'AgentCore stack: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=AgentCore-AcRtDemo-dev&filteringStatus=active&viewNested=true'
 .venv/bin/python .mise/tasks/ac-gen-teardown.py
@@ -289,12 +291,13 @@ run = [
 
 [tasks."ac-chain-down-dev"]
 description = "🔴 Destroy everything AgentCore of dev: ac-down-dev → cdk-down-dev-agentcore-deps-stack → config-delete-dev"
-confirm = "Destroy the AgentCore runtimes, the agentcore-deps stack, and the config of dev?"
+env = { CONFIRMED_BY_CHAIN = "true" }
 run = [
     "echo '=== ac-chain-down-dev: Destroy everything AgentCore of dev, in this order ==='",
     "echo '  1. ac-down-dev: Destroy every AgentCore runtime of the dev target: deploy an empty project with --yes, then generate the real one again (writes to AWS; keeps the agentcore-deps stack and the config)'",
     "echo '  2. cdk-down-dev-agentcore-deps-stack: Destroy stack agentcore-deps of dev (force, no confirmation)'",
     "echo '  3. config-delete-dev: Delete the config of dev from SSM Parameter Store (writes to AWS)'",
+    ".venv/bin/python .mise/tasks/confirm.py --action 'Destroy the AgentCore runtimes, the agentcore-deps stack, and the config of dev?' --skip_var CONFIRM_YES",
     { task = "ac-down-dev" },
     { task = "cdk-down-dev-agentcore-deps-stack" },
     { task = "config-delete-dev" },
@@ -548,6 +551,7 @@ env = { ENV_NAME = "tst" }
 depends = ["inst"]
 run = """
 echo '>>> config-delete-tst: Delete the config of tst from SSM Parameter Store (writes to AWS)'
+.venv/bin/python .mise/tasks/confirm.py --action 'Delete the config parameter of tst?' --skip_var CONFIRM_YES --skip_var CONFIRMED_BY_CHAIN
 .venv/bin/python .mise/tasks/config-delete.py
 """
 
@@ -573,6 +577,7 @@ env = { ENV_NAME = "tst" }
 depends = ["inst"]
 run = """
 echo '>>> ac-down-tst: Destroy every AgentCore runtime of the tst target: deploy an empty project with --yes, then generate the real one again (writes to AWS; keeps the agentcore-deps stack and the config)'
+.venv/bin/python .mise/tasks/confirm.py --action 'Destroy every AgentCore runtime of tst?' --skip_var CONFIRM_YES --skip_var CONFIRMED_BY_CHAIN
 echo '--- CloudFormation console ---'
 echo 'AgentCore stack: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=AgentCore-AcRtDemo-tst&filteringStatus=active&viewNested=true'
 .venv/bin/python .mise/tasks/ac-gen-teardown.py
@@ -597,12 +602,13 @@ run = [
 
 [tasks."ac-chain-down-tst"]
 description = "🔴 Destroy everything AgentCore of tst: ac-down-tst → cdk-down-tst-agentcore-deps-stack → config-delete-tst"
-confirm = "Destroy the AgentCore runtimes, the agentcore-deps stack, and the config of tst?"
+env = { CONFIRMED_BY_CHAIN = "true" }
 run = [
     "echo '=== ac-chain-down-tst: Destroy everything AgentCore of tst, in this order ==='",
     "echo '  1. ac-down-tst: Destroy every AgentCore runtime of the tst target: deploy an empty project with --yes, then generate the real one again (writes to AWS; keeps the agentcore-deps stack and the config)'",
     "echo '  2. cdk-down-tst-agentcore-deps-stack: Destroy stack agentcore-deps of tst (force, no confirmation)'",
     "echo '  3. config-delete-tst: Delete the config of tst from SSM Parameter Store (writes to AWS)'",
+    ".venv/bin/python .mise/tasks/confirm.py --action 'Destroy the AgentCore runtimes, the agentcore-deps stack, and the config of tst?' --skip_var CONFIRM_YES",
     { task = "ac-down-tst" },
     { task = "cdk-down-tst-agentcore-deps-stack" },
     { task = "config-delete-tst" },
@@ -856,6 +862,7 @@ env = { ENV_NAME = "prd" }
 depends = ["inst"]
 run = """
 echo '>>> config-delete-prd: Delete the config of prd from SSM Parameter Store (writes to AWS)'
+.venv/bin/python .mise/tasks/confirm.py --action 'Delete the config parameter of prd?' --skip_var CONFIRM_YES --skip_var CONFIRMED_BY_CHAIN
 .venv/bin/python .mise/tasks/config-delete.py
 """
 
@@ -881,6 +888,7 @@ env = { ENV_NAME = "prd" }
 depends = ["inst"]
 run = """
 echo '>>> ac-down-prd: Destroy every AgentCore runtime of the prd target: deploy an empty project with --yes, then generate the real one again (writes to AWS; keeps the agentcore-deps stack and the config)'
+.venv/bin/python .mise/tasks/confirm.py --action 'Destroy every AgentCore runtime of prd?' --skip_var CONFIRM_YES --skip_var CONFIRMED_BY_CHAIN
 echo '--- CloudFormation console ---'
 echo 'AgentCore stack: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=AgentCore-AcRtDemo-prd&filteringStatus=active&viewNested=true'
 .venv/bin/python .mise/tasks/ac-gen-teardown.py
@@ -905,12 +913,13 @@ run = [
 
 [tasks."ac-chain-down-prd"]
 description = "🔴 Destroy everything AgentCore of prd: ac-down-prd → cdk-down-prd-agentcore-deps-stack → config-delete-prd"
-confirm = "Destroy the AgentCore runtimes, the agentcore-deps stack, and the config of prd?"
+env = { CONFIRMED_BY_CHAIN = "true" }
 run = [
     "echo '=== ac-chain-down-prd: Destroy everything AgentCore of prd, in this order ==='",
     "echo '  1. ac-down-prd: Destroy every AgentCore runtime of the prd target: deploy an empty project with --yes, then generate the real one again (writes to AWS; keeps the agentcore-deps stack and the config)'",
     "echo '  2. cdk-down-prd-agentcore-deps-stack: Destroy stack agentcore-deps of prd (force, no confirmation)'",
     "echo '  3. config-delete-prd: Delete the config of prd from SSM Parameter Store (writes to AWS)'",
+    ".venv/bin/python .mise/tasks/confirm.py --action 'Destroy the AgentCore runtimes, the agentcore-deps stack, and the config of prd?' --skip_var CONFIRM_YES",
     { task = "ac-down-prd" },
     { task = "cdk-down-prd-agentcore-deps-stack" },
     { task = "config-delete-prd" },
