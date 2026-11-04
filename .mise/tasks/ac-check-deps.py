@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Exit 1 unless what agentcore.json of the current environment (ENV_NAME) refers
-to is deployed: the agentcore_deps stack.
+Exit 1 unless what the AgentCore runtimes of the current environment (ENV_NAME)
+depend on exists: the policy of the agentcore_deps stack, and the config parameter.
 """
 
 import sys

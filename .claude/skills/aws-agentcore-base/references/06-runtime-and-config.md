@@ -38,7 +38,7 @@ So both a deployed runtime and `agentcore dev` see the same three. `agentcore.js
 
 ## 3. The config is one SSM parameter
 
-- `mise run config-deploy-<env>` writes the whole config of `<env>` as JSON to `config.ssm_param_name_config`, a `SecureString` with the AWS-managed key `aws/ssm`, only when it changed. `ac-deploy-<env>` runs it first.
+- `mise run config-deploy-<env>` writes the whole config of `<env>` as JSON to `config.ssm_param_name_config`, a `SecureString` with the AWS-managed key `aws/ssm`, only when it changed. It is step 1 of `ac-chain-up-<env>`; `ac-deploy-<env>` only checks that the parameter exists.
 - On `agentcore` and `agentcore_local`, `one.config` is `Config.load_from_ssm(ssm_client, os.environ["CONFIG_SSM_PARAM_NAME"])`. A missing parameter raises `ValueError` naming `config-deploy-<env>`.
 - Why not env vars for the values: secrets (such as `db_connection_string`) would sit in plain text on the runtime, and the values would be spread over two places.
 - Why not copy the config files into `app/`: they would be zipped into the CodeZip, secrets included.

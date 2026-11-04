@@ -60,7 +60,7 @@ mise run build-doc
 
 Then start it with `ac-local-<slug>` and call it. `ac-dev-<slug>` also needs the config deployed (`config-deploy-<env>`), which changes AWS: ask first.
 
-Deploying is a separate step with the user's yes, in the order of `11`: `cdk-up-<env>-agentcore-deps-stack` if that stack changed, then `ac-deploy-<env>`.
+Deploying is a separate step with the user's yes (`11`): `mise run ac-chain-up-<env>` for the whole chain, or only the steps that changed (`cdk-up-<env>-agentcore-deps-stack`, then `ac-deploy-<env>`).
 
 ## 4. Report
 

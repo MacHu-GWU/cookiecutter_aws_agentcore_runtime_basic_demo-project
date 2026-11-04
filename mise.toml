@@ -229,19 +229,26 @@ depends = ["inst"]
 description = "⚙️ Deploy the config of dev to SSM Parameter Store, if it changed (writes to AWS)"
 env = { ENV_NAME = "dev" }
 depends = ["inst"]
-run = ".venv/bin/python .mise/tasks/config-deploy.py"
+run = """
+echo '>>> config-deploy-dev: Deploy the config of dev to SSM Parameter Store, if it changed (writes to AWS)'
+.venv/bin/python .mise/tasks/config-deploy.py
+"""
 
 [tasks."config-delete-dev"]
 description = "🗑️ Delete the config of dev from SSM Parameter Store (writes to AWS)"
 env = { ENV_NAME = "dev" }
 depends = ["inst"]
-run = ".venv/bin/python .mise/tasks/config-delete.py"
+run = """
+echo '>>> config-delete-dev: Delete the config of dev from SSM Parameter Store (writes to AWS)'
+.venv/bin/python .mise/tasks/config-delete.py
+"""
 
 [tasks."ac-deploy-dev"]
-description = "🚀 Deploy every AgentCore runtime to the dev target: check the agentcore-deps stack, deploy the config, generate the project for dev, deploy (writes to AWS)"
+description = "🚀 Deploy every AgentCore runtime to the dev target: check that the agentcore-deps policy and the config exist, generate the project for dev, check the wheels, deploy (writes to AWS)"
 env = { ENV_NAME = "dev" }
-depends = ["inst", "config-deploy-dev"]
+depends = ["inst"]
 run = """
+echo '>>> ac-deploy-dev: Deploy every AgentCore runtime to the dev target: check that the agentcore-deps policy and the config exist, generate the project for dev, check the wheels, deploy (writes to AWS)'
 echo '--- CloudFormation console ---'
 echo 'AgentCore stack: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=AgentCore-AcRtDemo-dev&filteringStatus=active&viewNested=true'
 .venv/bin/python .mise/tasks/ac-check-deps.py
@@ -257,6 +264,7 @@ description = "🔴 Destroy every AgentCore runtime of the dev target: deploy an
 env = { ENV_NAME = "dev" }
 depends = ["inst"]
 run = """
+echo '>>> ac-down-dev: Destroy every AgentCore runtime of the dev target: deploy an empty project with --yes, then generate the real one again (writes to AWS; keeps the agentcore-deps stack and the config)'
 echo '--- CloudFormation console ---'
 echo 'AgentCore stack: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=AgentCore-AcRtDemo-dev&filteringStatus=active&viewNested=true'
 .venv/bin/python .mise/tasks/ac-gen-teardown.py
@@ -266,12 +274,40 @@ AWS_PROFILE={{env.AWS_PROFILE_FOR_DEV}} agentcore deploy --target dev --yes
 .venv/bin/python .mise/tasks/ac-gen.py
 """
 
+[tasks."ac-chain-up-dev"]
+description = "🚀 Deploy everything AgentCore of dev: config-deploy-dev → cdk-up-dev-agentcore-deps-stack → ac-deploy-dev"
+run = [
+    "echo '=== ac-chain-up-dev: Deploy everything AgentCore of dev, in this order ==='",
+    "echo '  1. config-deploy-dev: Deploy the config of dev to SSM Parameter Store, if it changed (writes to AWS)'",
+    "echo '  2. cdk-up-dev-agentcore-deps-stack: Deploy stack agentcore-deps of dev (no approval prompt)'",
+    "echo '  3. ac-deploy-dev: Deploy every AgentCore runtime to the dev target: check that the agentcore-deps policy and the config exist, generate the project for dev, check the wheels, deploy (writes to AWS)'",
+    { task = "config-deploy-dev" },
+    { task = "cdk-up-dev-agentcore-deps-stack" },
+    { task = "ac-deploy-dev" },
+    "echo '=== ac-chain-up-dev: done ==='",
+]
+
+[tasks."ac-chain-down-dev"]
+description = "🔴 Destroy everything AgentCore of dev: ac-down-dev → cdk-down-dev-agentcore-deps-stack → config-delete-dev"
+confirm = "Destroy the AgentCore runtimes, the agentcore-deps stack, and the config of dev?"
+run = [
+    "echo '=== ac-chain-down-dev: Destroy everything AgentCore of dev, in this order ==='",
+    "echo '  1. ac-down-dev: Destroy every AgentCore runtime of the dev target: deploy an empty project with --yes, then generate the real one again (writes to AWS; keeps the agentcore-deps stack and the config)'",
+    "echo '  2. cdk-down-dev-agentcore-deps-stack: Destroy stack agentcore-deps of dev (force, no confirmation)'",
+    "echo '  3. config-delete-dev: Delete the config of dev from SSM Parameter Store (writes to AWS)'",
+    { task = "ac-down-dev" },
+    { task = "cdk-down-dev-agentcore-deps-stack" },
+    { task = "config-delete-dev" },
+    "echo '=== ac-chain-down-dev: done ==='",
+]
+
 [tasks."cdk-synth-dev-all"]
 description = "⚪ Synthesize all stacks of dev to CloudFormation templates (no AWS call)"
 dir = "cdk"
 env = { ENV_NAME = "dev" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-synth-dev-all: Synthesize all stacks of dev to CloudFormation templates (no AWS call)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-dev-alerts: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-dev-alerts&filteringStatus=active&viewNested=true'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-dev-publisher: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-dev-publisher&filteringStatus=active&viewNested=true'
@@ -287,6 +323,7 @@ dir = "cdk"
 env = { ENV_NAME = "dev" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-plan-dev-all: Plan all stacks of dev: diff against what is deployed, through a CloudFormation change set (no deploy)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-dev-alerts: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-dev-alerts&filteringStatus=active&viewNested=true'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-dev-publisher: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-dev-publisher&filteringStatus=active&viewNested=true'
@@ -302,6 +339,7 @@ dir = "cdk"
 env = { ENV_NAME = "dev" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-up-dev-all: Deploy all stacks of dev (no approval prompt)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-dev-alerts: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-dev-alerts&filteringStatus=active&viewNested=true'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-dev-publisher: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-dev-publisher&filteringStatus=active&viewNested=true'
@@ -317,6 +355,7 @@ dir = "cdk"
 env = { ENV_NAME = "dev" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-down-dev-all: Destroy all stacks of dev (force, no confirmation)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-dev-alerts: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-dev-alerts&filteringStatus=active&viewNested=true'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-dev-publisher: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-dev-publisher&filteringStatus=active&viewNested=true'
@@ -332,6 +371,7 @@ dir = "cdk"
 env = { ENV_NAME = "dev" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-synth-dev-alerts-stack: Synthesize stack alerts of dev to CloudFormation templates (no AWS call)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-dev-alerts: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-dev-alerts&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -345,6 +385,7 @@ dir = "cdk"
 env = { ENV_NAME = "dev" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-plan-dev-alerts-stack: Plan stack alerts of dev: diff against what is deployed, through a CloudFormation change set (no deploy)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-dev-alerts: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-dev-alerts&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -358,6 +399,7 @@ dir = "cdk"
 env = { ENV_NAME = "dev" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-up-dev-alerts-stack: Deploy stack alerts of dev (no approval prompt)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-dev-alerts: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-dev-alerts&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -371,6 +413,7 @@ dir = "cdk"
 env = { ENV_NAME = "dev" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-down-dev-alerts-stack: Destroy stack alerts of dev (force, no confirmation)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-dev-alerts: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-dev-alerts&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -384,6 +427,7 @@ dir = "cdk"
 env = { ENV_NAME = "dev" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-synth-dev-publisher-stack: Synthesize stack publisher of dev to CloudFormation templates (no AWS call)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-dev-publisher: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-dev-publisher&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -397,6 +441,7 @@ dir = "cdk"
 env = { ENV_NAME = "dev" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-plan-dev-publisher-stack: Plan stack publisher of dev: diff against what is deployed, through a CloudFormation change set (no deploy)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-dev-publisher: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-dev-publisher&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -410,6 +455,7 @@ dir = "cdk"
 env = { ENV_NAME = "dev" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-up-dev-publisher-stack: Deploy stack publisher of dev (no approval prompt)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-dev-publisher: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-dev-publisher&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -423,6 +469,7 @@ dir = "cdk"
 env = { ENV_NAME = "dev" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-down-dev-publisher-stack: Destroy stack publisher of dev (force, no confirmation)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-dev-publisher: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-dev-publisher&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -436,6 +483,7 @@ dir = "cdk"
 env = { ENV_NAME = "dev" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-synth-dev-agentcore-deps-stack: Synthesize stack agentcore-deps of dev to CloudFormation templates (no AWS call)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-dev-agentcore-deps: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-dev-agentcore-deps&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -449,6 +497,7 @@ dir = "cdk"
 env = { ENV_NAME = "dev" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-plan-dev-agentcore-deps-stack: Plan stack agentcore-deps of dev: diff against what is deployed, through a CloudFormation change set (no deploy)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-dev-agentcore-deps: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-dev-agentcore-deps&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -462,6 +511,7 @@ dir = "cdk"
 env = { ENV_NAME = "dev" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-up-dev-agentcore-deps-stack: Deploy stack agentcore-deps of dev (no approval prompt)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-dev-agentcore-deps: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-dev-agentcore-deps&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -475,6 +525,7 @@ dir = "cdk"
 env = { ENV_NAME = "dev" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-down-dev-agentcore-deps-stack: Destroy stack agentcore-deps of dev (force, no confirmation)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-dev-agentcore-deps: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-dev-agentcore-deps&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -486,19 +537,26 @@ cdk destroy cookiecutter-aws-agentcore-runtime-basic-demo-dev-agentcore-deps --e
 description = "⚙️ Deploy the config of tst to SSM Parameter Store, if it changed (writes to AWS)"
 env = { ENV_NAME = "tst" }
 depends = ["inst"]
-run = ".venv/bin/python .mise/tasks/config-deploy.py"
+run = """
+echo '>>> config-deploy-tst: Deploy the config of tst to SSM Parameter Store, if it changed (writes to AWS)'
+.venv/bin/python .mise/tasks/config-deploy.py
+"""
 
 [tasks."config-delete-tst"]
 description = "🗑️ Delete the config of tst from SSM Parameter Store (writes to AWS)"
 env = { ENV_NAME = "tst" }
 depends = ["inst"]
-run = ".venv/bin/python .mise/tasks/config-delete.py"
+run = """
+echo '>>> config-delete-tst: Delete the config of tst from SSM Parameter Store (writes to AWS)'
+.venv/bin/python .mise/tasks/config-delete.py
+"""
 
 [tasks."ac-deploy-tst"]
-description = "🚀 Deploy every AgentCore runtime to the tst target: check the agentcore-deps stack, deploy the config, generate the project for tst, deploy (writes to AWS)"
+description = "🚀 Deploy every AgentCore runtime to the tst target: check that the agentcore-deps policy and the config exist, generate the project for tst, check the wheels, deploy (writes to AWS)"
 env = { ENV_NAME = "tst" }
-depends = ["inst", "config-deploy-tst"]
+depends = ["inst"]
 run = """
+echo '>>> ac-deploy-tst: Deploy every AgentCore runtime to the tst target: check that the agentcore-deps policy and the config exist, generate the project for tst, check the wheels, deploy (writes to AWS)'
 echo '--- CloudFormation console ---'
 echo 'AgentCore stack: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=AgentCore-AcRtDemo-tst&filteringStatus=active&viewNested=true'
 .venv/bin/python .mise/tasks/ac-check-deps.py
@@ -514,6 +572,7 @@ description = "🔴 Destroy every AgentCore runtime of the tst target: deploy an
 env = { ENV_NAME = "tst" }
 depends = ["inst"]
 run = """
+echo '>>> ac-down-tst: Destroy every AgentCore runtime of the tst target: deploy an empty project with --yes, then generate the real one again (writes to AWS; keeps the agentcore-deps stack and the config)'
 echo '--- CloudFormation console ---'
 echo 'AgentCore stack: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=AgentCore-AcRtDemo-tst&filteringStatus=active&viewNested=true'
 .venv/bin/python .mise/tasks/ac-gen-teardown.py
@@ -523,12 +582,40 @@ AWS_PROFILE={{env.AWS_PROFILE_FOR_TST}} agentcore deploy --target tst --yes
 .venv/bin/python .mise/tasks/ac-gen.py
 """
 
+[tasks."ac-chain-up-tst"]
+description = "🚀 Deploy everything AgentCore of tst: config-deploy-tst → cdk-up-tst-agentcore-deps-stack → ac-deploy-tst"
+run = [
+    "echo '=== ac-chain-up-tst: Deploy everything AgentCore of tst, in this order ==='",
+    "echo '  1. config-deploy-tst: Deploy the config of tst to SSM Parameter Store, if it changed (writes to AWS)'",
+    "echo '  2. cdk-up-tst-agentcore-deps-stack: Deploy stack agentcore-deps of tst (no approval prompt)'",
+    "echo '  3. ac-deploy-tst: Deploy every AgentCore runtime to the tst target: check that the agentcore-deps policy and the config exist, generate the project for tst, check the wheels, deploy (writes to AWS)'",
+    { task = "config-deploy-tst" },
+    { task = "cdk-up-tst-agentcore-deps-stack" },
+    { task = "ac-deploy-tst" },
+    "echo '=== ac-chain-up-tst: done ==='",
+]
+
+[tasks."ac-chain-down-tst"]
+description = "🔴 Destroy everything AgentCore of tst: ac-down-tst → cdk-down-tst-agentcore-deps-stack → config-delete-tst"
+confirm = "Destroy the AgentCore runtimes, the agentcore-deps stack, and the config of tst?"
+run = [
+    "echo '=== ac-chain-down-tst: Destroy everything AgentCore of tst, in this order ==='",
+    "echo '  1. ac-down-tst: Destroy every AgentCore runtime of the tst target: deploy an empty project with --yes, then generate the real one again (writes to AWS; keeps the agentcore-deps stack and the config)'",
+    "echo '  2. cdk-down-tst-agentcore-deps-stack: Destroy stack agentcore-deps of tst (force, no confirmation)'",
+    "echo '  3. config-delete-tst: Delete the config of tst from SSM Parameter Store (writes to AWS)'",
+    { task = "ac-down-tst" },
+    { task = "cdk-down-tst-agentcore-deps-stack" },
+    { task = "config-delete-tst" },
+    "echo '=== ac-chain-down-tst: done ==='",
+]
+
 [tasks."cdk-synth-tst-all"]
 description = "⚪ Synthesize all stacks of tst to CloudFormation templates (no AWS call)"
 dir = "cdk"
 env = { ENV_NAME = "tst" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-synth-tst-all: Synthesize all stacks of tst to CloudFormation templates (no AWS call)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-tst-alerts: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-tst-alerts&filteringStatus=active&viewNested=true'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-tst-publisher: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-tst-publisher&filteringStatus=active&viewNested=true'
@@ -544,6 +631,7 @@ dir = "cdk"
 env = { ENV_NAME = "tst" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-plan-tst-all: Plan all stacks of tst: diff against what is deployed, through a CloudFormation change set (no deploy)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-tst-alerts: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-tst-alerts&filteringStatus=active&viewNested=true'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-tst-publisher: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-tst-publisher&filteringStatus=active&viewNested=true'
@@ -559,6 +647,7 @@ dir = "cdk"
 env = { ENV_NAME = "tst" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-up-tst-all: Deploy all stacks of tst (no approval prompt)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-tst-alerts: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-tst-alerts&filteringStatus=active&viewNested=true'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-tst-publisher: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-tst-publisher&filteringStatus=active&viewNested=true'
@@ -574,6 +663,7 @@ dir = "cdk"
 env = { ENV_NAME = "tst" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-down-tst-all: Destroy all stacks of tst (force, no confirmation)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-tst-alerts: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-tst-alerts&filteringStatus=active&viewNested=true'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-tst-publisher: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-tst-publisher&filteringStatus=active&viewNested=true'
@@ -589,6 +679,7 @@ dir = "cdk"
 env = { ENV_NAME = "tst" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-synth-tst-alerts-stack: Synthesize stack alerts of tst to CloudFormation templates (no AWS call)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-tst-alerts: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-tst-alerts&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -602,6 +693,7 @@ dir = "cdk"
 env = { ENV_NAME = "tst" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-plan-tst-alerts-stack: Plan stack alerts of tst: diff against what is deployed, through a CloudFormation change set (no deploy)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-tst-alerts: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-tst-alerts&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -615,6 +707,7 @@ dir = "cdk"
 env = { ENV_NAME = "tst" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-up-tst-alerts-stack: Deploy stack alerts of tst (no approval prompt)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-tst-alerts: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-tst-alerts&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -628,6 +721,7 @@ dir = "cdk"
 env = { ENV_NAME = "tst" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-down-tst-alerts-stack: Destroy stack alerts of tst (force, no confirmation)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-tst-alerts: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-tst-alerts&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -641,6 +735,7 @@ dir = "cdk"
 env = { ENV_NAME = "tst" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-synth-tst-publisher-stack: Synthesize stack publisher of tst to CloudFormation templates (no AWS call)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-tst-publisher: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-tst-publisher&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -654,6 +749,7 @@ dir = "cdk"
 env = { ENV_NAME = "tst" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-plan-tst-publisher-stack: Plan stack publisher of tst: diff against what is deployed, through a CloudFormation change set (no deploy)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-tst-publisher: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-tst-publisher&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -667,6 +763,7 @@ dir = "cdk"
 env = { ENV_NAME = "tst" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-up-tst-publisher-stack: Deploy stack publisher of tst (no approval prompt)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-tst-publisher: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-tst-publisher&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -680,6 +777,7 @@ dir = "cdk"
 env = { ENV_NAME = "tst" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-down-tst-publisher-stack: Destroy stack publisher of tst (force, no confirmation)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-tst-publisher: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-tst-publisher&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -693,6 +791,7 @@ dir = "cdk"
 env = { ENV_NAME = "tst" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-synth-tst-agentcore-deps-stack: Synthesize stack agentcore-deps of tst to CloudFormation templates (no AWS call)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-tst-agentcore-deps: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-tst-agentcore-deps&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -706,6 +805,7 @@ dir = "cdk"
 env = { ENV_NAME = "tst" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-plan-tst-agentcore-deps-stack: Plan stack agentcore-deps of tst: diff against what is deployed, through a CloudFormation change set (no deploy)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-tst-agentcore-deps: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-tst-agentcore-deps&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -719,6 +819,7 @@ dir = "cdk"
 env = { ENV_NAME = "tst" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-up-tst-agentcore-deps-stack: Deploy stack agentcore-deps of tst (no approval prompt)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-tst-agentcore-deps: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-tst-agentcore-deps&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -732,6 +833,7 @@ dir = "cdk"
 env = { ENV_NAME = "tst" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-down-tst-agentcore-deps-stack: Destroy stack agentcore-deps of tst (force, no confirmation)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-tst-agentcore-deps: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-tst-agentcore-deps&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -743,19 +845,26 @@ cdk destroy cookiecutter-aws-agentcore-runtime-basic-demo-tst-agentcore-deps --e
 description = "⚙️ Deploy the config of prd to SSM Parameter Store, if it changed (writes to AWS)"
 env = { ENV_NAME = "prd" }
 depends = ["inst"]
-run = ".venv/bin/python .mise/tasks/config-deploy.py"
+run = """
+echo '>>> config-deploy-prd: Deploy the config of prd to SSM Parameter Store, if it changed (writes to AWS)'
+.venv/bin/python .mise/tasks/config-deploy.py
+"""
 
 [tasks."config-delete-prd"]
 description = "🗑️ Delete the config of prd from SSM Parameter Store (writes to AWS)"
 env = { ENV_NAME = "prd" }
 depends = ["inst"]
-run = ".venv/bin/python .mise/tasks/config-delete.py"
+run = """
+echo '>>> config-delete-prd: Delete the config of prd from SSM Parameter Store (writes to AWS)'
+.venv/bin/python .mise/tasks/config-delete.py
+"""
 
 [tasks."ac-deploy-prd"]
-description = "🚀 Deploy every AgentCore runtime to the prd target: check the agentcore-deps stack, deploy the config, generate the project for prd, deploy (writes to AWS)"
+description = "🚀 Deploy every AgentCore runtime to the prd target: check that the agentcore-deps policy and the config exist, generate the project for prd, check the wheels, deploy (writes to AWS)"
 env = { ENV_NAME = "prd" }
-depends = ["inst", "config-deploy-prd"]
+depends = ["inst"]
 run = """
+echo '>>> ac-deploy-prd: Deploy every AgentCore runtime to the prd target: check that the agentcore-deps policy and the config exist, generate the project for prd, check the wheels, deploy (writes to AWS)'
 echo '--- CloudFormation console ---'
 echo 'AgentCore stack: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=AgentCore-AcRtDemo-prd&filteringStatus=active&viewNested=true'
 .venv/bin/python .mise/tasks/ac-check-deps.py
@@ -771,6 +880,7 @@ description = "🔴 Destroy every AgentCore runtime of the prd target: deploy an
 env = { ENV_NAME = "prd" }
 depends = ["inst"]
 run = """
+echo '>>> ac-down-prd: Destroy every AgentCore runtime of the prd target: deploy an empty project with --yes, then generate the real one again (writes to AWS; keeps the agentcore-deps stack and the config)'
 echo '--- CloudFormation console ---'
 echo 'AgentCore stack: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=AgentCore-AcRtDemo-prd&filteringStatus=active&viewNested=true'
 .venv/bin/python .mise/tasks/ac-gen-teardown.py
@@ -780,12 +890,40 @@ AWS_PROFILE={{env.AWS_PROFILE_FOR_PRD}} agentcore deploy --target prd --yes
 .venv/bin/python .mise/tasks/ac-gen.py
 """
 
+[tasks."ac-chain-up-prd"]
+description = "🚀 Deploy everything AgentCore of prd: config-deploy-prd → cdk-up-prd-agentcore-deps-stack → ac-deploy-prd"
+run = [
+    "echo '=== ac-chain-up-prd: Deploy everything AgentCore of prd, in this order ==='",
+    "echo '  1. config-deploy-prd: Deploy the config of prd to SSM Parameter Store, if it changed (writes to AWS)'",
+    "echo '  2. cdk-up-prd-agentcore-deps-stack: Deploy stack agentcore-deps of prd (no approval prompt)'",
+    "echo '  3. ac-deploy-prd: Deploy every AgentCore runtime to the prd target: check that the agentcore-deps policy and the config exist, generate the project for prd, check the wheels, deploy (writes to AWS)'",
+    { task = "config-deploy-prd" },
+    { task = "cdk-up-prd-agentcore-deps-stack" },
+    { task = "ac-deploy-prd" },
+    "echo '=== ac-chain-up-prd: done ==='",
+]
+
+[tasks."ac-chain-down-prd"]
+description = "🔴 Destroy everything AgentCore of prd: ac-down-prd → cdk-down-prd-agentcore-deps-stack → config-delete-prd"
+confirm = "Destroy the AgentCore runtimes, the agentcore-deps stack, and the config of prd?"
+run = [
+    "echo '=== ac-chain-down-prd: Destroy everything AgentCore of prd, in this order ==='",
+    "echo '  1. ac-down-prd: Destroy every AgentCore runtime of the prd target: deploy an empty project with --yes, then generate the real one again (writes to AWS; keeps the agentcore-deps stack and the config)'",
+    "echo '  2. cdk-down-prd-agentcore-deps-stack: Destroy stack agentcore-deps of prd (force, no confirmation)'",
+    "echo '  3. config-delete-prd: Delete the config of prd from SSM Parameter Store (writes to AWS)'",
+    { task = "ac-down-prd" },
+    { task = "cdk-down-prd-agentcore-deps-stack" },
+    { task = "config-delete-prd" },
+    "echo '=== ac-chain-down-prd: done ==='",
+]
+
 [tasks."cdk-synth-prd-all"]
 description = "⚪ Synthesize all stacks of prd to CloudFormation templates (no AWS call)"
 dir = "cdk"
 env = { ENV_NAME = "prd" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-synth-prd-all: Synthesize all stacks of prd to CloudFormation templates (no AWS call)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-prd-alerts: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-prd-alerts&filteringStatus=active&viewNested=true'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-prd-publisher: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-prd-publisher&filteringStatus=active&viewNested=true'
@@ -801,6 +939,7 @@ dir = "cdk"
 env = { ENV_NAME = "prd" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-plan-prd-all: Plan all stacks of prd: diff against what is deployed, through a CloudFormation change set (no deploy)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-prd-alerts: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-prd-alerts&filteringStatus=active&viewNested=true'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-prd-publisher: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-prd-publisher&filteringStatus=active&viewNested=true'
@@ -816,6 +955,7 @@ dir = "cdk"
 env = { ENV_NAME = "prd" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-up-prd-all: Deploy all stacks of prd (no approval prompt)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-prd-alerts: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-prd-alerts&filteringStatus=active&viewNested=true'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-prd-publisher: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-prd-publisher&filteringStatus=active&viewNested=true'
@@ -831,6 +971,7 @@ dir = "cdk"
 env = { ENV_NAME = "prd" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-down-prd-all: Destroy all stacks of prd (force, no confirmation)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-prd-alerts: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-prd-alerts&filteringStatus=active&viewNested=true'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-prd-publisher: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-prd-publisher&filteringStatus=active&viewNested=true'
@@ -846,6 +987,7 @@ dir = "cdk"
 env = { ENV_NAME = "prd" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-synth-prd-alerts-stack: Synthesize stack alerts of prd to CloudFormation templates (no AWS call)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-prd-alerts: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-prd-alerts&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -859,6 +1001,7 @@ dir = "cdk"
 env = { ENV_NAME = "prd" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-plan-prd-alerts-stack: Plan stack alerts of prd: diff against what is deployed, through a CloudFormation change set (no deploy)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-prd-alerts: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-prd-alerts&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -872,6 +1015,7 @@ dir = "cdk"
 env = { ENV_NAME = "prd" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-up-prd-alerts-stack: Deploy stack alerts of prd (no approval prompt)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-prd-alerts: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-prd-alerts&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -885,6 +1029,7 @@ dir = "cdk"
 env = { ENV_NAME = "prd" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-down-prd-alerts-stack: Destroy stack alerts of prd (force, no confirmation)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-prd-alerts: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-prd-alerts&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -898,6 +1043,7 @@ dir = "cdk"
 env = { ENV_NAME = "prd" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-synth-prd-publisher-stack: Synthesize stack publisher of prd to CloudFormation templates (no AWS call)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-prd-publisher: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-prd-publisher&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -911,6 +1057,7 @@ dir = "cdk"
 env = { ENV_NAME = "prd" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-plan-prd-publisher-stack: Plan stack publisher of prd: diff against what is deployed, through a CloudFormation change set (no deploy)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-prd-publisher: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-prd-publisher&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -924,6 +1071,7 @@ dir = "cdk"
 env = { ENV_NAME = "prd" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-up-prd-publisher-stack: Deploy stack publisher of prd (no approval prompt)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-prd-publisher: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-prd-publisher&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -937,6 +1085,7 @@ dir = "cdk"
 env = { ENV_NAME = "prd" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-down-prd-publisher-stack: Destroy stack publisher of prd (force, no confirmation)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-prd-publisher: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-prd-publisher&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -950,6 +1099,7 @@ dir = "cdk"
 env = { ENV_NAME = "prd" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-synth-prd-agentcore-deps-stack: Synthesize stack agentcore-deps of prd to CloudFormation templates (no AWS call)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-prd-agentcore-deps: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-prd-agentcore-deps&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -963,6 +1113,7 @@ dir = "cdk"
 env = { ENV_NAME = "prd" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-plan-prd-agentcore-deps-stack: Plan stack agentcore-deps of prd: diff against what is deployed, through a CloudFormation change set (no deploy)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-prd-agentcore-deps: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-prd-agentcore-deps&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -976,6 +1127,7 @@ dir = "cdk"
 env = { ENV_NAME = "prd" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-up-prd-agentcore-deps-stack: Deploy stack agentcore-deps of prd (no approval prompt)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-prd-agentcore-deps: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-prd-agentcore-deps&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'
@@ -989,6 +1141,7 @@ dir = "cdk"
 env = { ENV_NAME = "prd" }
 depends = ["inst"]
 run = """
+echo '>>> cdk-down-prd-agentcore-deps-stack: Destroy stack agentcore-deps of prd (force, no confirmation)'
 echo '--- CloudFormation console ---'
 echo 'cookiecutter-aws-agentcore-runtime-basic-demo-prd-agentcore-deps: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=cookiecutter-aws-agentcore-runtime-basic-demo-prd-agentcore-deps&filteringStatus=active&viewNested=true'
 echo '--- Run command ---'

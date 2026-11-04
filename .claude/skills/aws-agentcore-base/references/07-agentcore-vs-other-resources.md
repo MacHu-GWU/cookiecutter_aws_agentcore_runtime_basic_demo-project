@@ -54,4 +54,4 @@ The CLI-created role already carries what every runtime needs (logs, X-Ray, Bedr
 
 ## 5. Deploy order
 
-The AgentCore stack refers to what `agentcore_deps` creates, so `agentcore_deps` goes first: `cdk-up-<env>-agentcore-deps-stack`, then `ac-deploy-<env>`. `ac-deploy-<env>` checks it (`one.check_agentcore_deps()`: the policy exists) and stops with the task to run if not. The full sequence is in `11`.
+The AgentCore stack refers to what `agentcore_deps` creates, so `agentcore_deps` goes first: `cdk-up-<env>-agentcore-deps-stack`, then `ac-deploy-<env>`; `ac-chain-up-<env>` runs them in that order, after the config. `ac-deploy-<env>` checks it (`one.check_agentcore_deps()`: the policy and the config parameter exist) and stops with the task to run if not. The chains are in `11`.

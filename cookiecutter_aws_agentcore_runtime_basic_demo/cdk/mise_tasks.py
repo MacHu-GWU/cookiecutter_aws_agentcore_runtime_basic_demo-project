@@ -237,66 +237,191 @@ def get_config_task_name(action: str, env_name: str) -> str:
     return f"config-{action}-{env_name}"
 
 
-def _render_env_tasks(env_name: str, agentcore_target: StackTarget) -> str:
+def get_banner(task_name: str, summary: str) -> str:
     """
-    The tasks of one environment that are not about one CDK stack.
+    The first line of every generated step task: ``>>> <task>: <what it does>``.
+    A chain task runs its steps one after another, so its output reads as a
+    list of these lines, each followed by that step's own output.
+    """
+    return f"echo '>>> {task_name}: {summary}'"
+
+
+@dataclasses.dataclass(frozen=True)
+class EnvStep:
+    """
+    One step task of an environment, also a link of a chain task.
+    """
+
+    # fmt: off
+    name: str = dataclasses.field()  #: The task name, such as ``config-deploy-dev``.
+    emoji: str = dataclasses.field()  #: Shown in front of the description.
+    summary: str = dataclasses.field()  #: What it does; the description and the banner. No single quote.
+    script: str = dataclasses.field(default="")  #: The commands after the banner; empty for a cdk task, rendered elsewhere.
+    # fmt: on
+
+
+def get_cdk_step(action_name: str, env_name: str, stack_slug: str) -> EnvStep:
+    """
+    The ``cdk-<action>-<env>-<stack>-stack`` task as a chain link, with the
+    summary its own banner prints.
+    """
+    action = {action.name: action for action in CDK_ACTIONS}[action_name]
+    return EnvStep(
+        name=get_task_name(action.name, env_name, stack_slug),
+        emoji=action.emoji,
+        summary=action.summary.format(target=f"stack {stack_slug}", env=env_name),
+    )
+
+
+def get_env_steps(
+    env_name: str,
+    agentcore_target: StackTarget,
+) -> dict[str, EnvStep]:
+    """
+    The AgentCore step tasks of one environment, by role, plus the two
+    ``cdk-*`` tasks of the ``agentcore_deps`` stack the chains use (rendered
+    with the other cdk tasks).
     """
     profile_var = get_aws_profile_env_var(env_name)
     target_name = agentcore_target.construct_id
     deploy_command = (
         f"AWS_PROFILE={{{{env.{profile_var}}}}} agentcore deploy --target {target_name}"
     )
-    deploy_script = "\n".join(
-        [
-            "echo '--- CloudFormation console ---'",
-            f"echo 'AgentCore stack: {agentcore_target.console_url}'",
-            ".venv/bin/python .mise/tasks/ac-check-deps.py",
-            ".venv/bin/python .mise/tasks/ac-gen.py",
-            ".venv/bin/python .mise/tasks/ac-check-wheels.py",
-            "echo '--- Run command ---'",
-            f"echo '{deploy_command}'",
-            deploy_command,
-        ]
-    )
-    down_command = f"AWS_PROFILE={{{{env.{profile_var}}}}} agentcore deploy --target {target_name} --yes"
-    down_script = "\n".join(
-        [
-            "echo '--- CloudFormation console ---'",
-            f"echo 'AgentCore stack: {agentcore_target.console_url}'",
-            ".venv/bin/python .mise/tasks/ac-gen-teardown.py",
-            "echo '--- Run command ---'",
-            f"echo '{down_command}'",
-            down_command,
-            ".venv/bin/python .mise/tasks/ac-gen.py",
-        ]
-    )
-    config_deploy_task_name = get_config_task_name("deploy", env_name)
+    down_command = f"{deploy_command} --yes"
+    console = [
+        "echo '--- CloudFormation console ---'",
+        f"echo 'AgentCore stack: {agentcore_target.console_url}'",
+    ]
+    deps_slug = to_stack_slug("agentcore_deps")
+    return {
+        "config_deploy": EnvStep(
+            name=get_config_task_name("deploy", env_name),
+            emoji="⚙️",
+            summary=f"Deploy the config of {env_name} to SSM Parameter Store, if it changed (writes to AWS)",
+            script=".venv/bin/python .mise/tasks/config-deploy.py",
+        ),
+        "config_delete": EnvStep(
+            name=get_config_task_name("delete", env_name),
+            emoji="🗑️",
+            summary=f"Delete the config of {env_name} from SSM Parameter Store (writes to AWS)",
+            script=".venv/bin/python .mise/tasks/config-delete.py",
+        ),
+        "deps_up": get_cdk_step("up", env_name, deps_slug),
+        "deps_down": get_cdk_step("down", env_name, deps_slug),
+        "ac_deploy": EnvStep(
+            name=f"ac-deploy-{env_name}",
+            emoji="🚀",
+            summary=(
+                f"Deploy every AgentCore runtime to the {target_name} target: check that the "
+                f"agentcore-deps policy and the config exist, generate the project for "
+                f"{env_name}, check the wheels, deploy (writes to AWS)"
+            ),
+            script="\n".join(
+                [
+                    *console,
+                    ".venv/bin/python .mise/tasks/ac-check-deps.py",
+                    ".venv/bin/python .mise/tasks/ac-gen.py",
+                    ".venv/bin/python .mise/tasks/ac-check-wheels.py",
+                    "echo '--- Run command ---'",
+                    f"echo '{deploy_command}'",
+                    deploy_command,
+                ]
+            ),
+        ),
+        "ac_down": EnvStep(
+            name=f"ac-down-{env_name}",
+            emoji="🔴",
+            summary=(
+                f"Destroy every AgentCore runtime of the {target_name} target: deploy an "
+                f"empty project with --yes, then generate the real one again (writes to "
+                f"AWS; keeps the agentcore-deps stack and the config)"
+            ),
+            script="\n".join(
+                [
+                    *console,
+                    ".venv/bin/python .mise/tasks/ac-gen-teardown.py",
+                    "echo '--- Run command ---'",
+                    f"echo '{down_command}'",
+                    down_command,
+                    ".venv/bin/python .mise/tasks/ac-gen.py",
+                ]
+            ),
+        ),
+    }
+
+
+def _render_step(step: EnvStep, env_name: str) -> str:
+    script = get_banner(step.name, step.summary) + "\n" + step.script
     lines = [
-        f'[tasks."{config_deploy_task_name}"]',
-        f'description = "⚙️ Deploy the config of {env_name} to SSM Parameter Store, if it changed (writes to AWS)"',
+        f'[tasks."{step.name}"]',
+        f'description = "{step.emoji} {step.summary}"',
         f'env = {{ {ENV_NAME_VAR} = "{env_name}" }}',
         'depends = ["inst"]',
-        'run = ".venv/bin/python .mise/tasks/config-deploy.py"',
-        "",
-        f'[tasks."{get_config_task_name("delete", env_name)}"]',
-        f'description = "🗑️ Delete the config of {env_name} from SSM Parameter Store (writes to AWS)"',
-        f'env = {{ {ENV_NAME_VAR} = "{env_name}" }}',
-        'depends = ["inst"]',
-        'run = ".venv/bin/python .mise/tasks/config-delete.py"',
-        "",
-        f'[tasks."ac-deploy-{env_name}"]',
-        f'description = "🚀 Deploy every AgentCore runtime to the {target_name} target: check the agentcore-deps stack, deploy the config, generate the project for {env_name}, deploy (writes to AWS)"',
-        f'env = {{ {ENV_NAME_VAR} = "{env_name}" }}',
-        f'depends = ["inst", "{config_deploy_task_name}"]',
-        f'run = """\n{deploy_script}\n"""',
-        "",
-        f'[tasks."ac-down-{env_name}"]',
-        f'description = "🔴 Destroy every AgentCore runtime of the {target_name} target: deploy an empty project with --yes, then generate the real one again (writes to AWS; keeps the agentcore-deps stack and the config)"',
-        f'env = {{ {ENV_NAME_VAR} = "{env_name}" }}',
-        'depends = ["inst"]',
-        f'run = """\n{down_script}\n"""',
+        f'run = """\n{script}\n"""',
     ]
     return "\n".join(lines)
+
+
+def _render_chain(
+    name: str,
+    emoji: str,
+    summary: str,
+    steps: list[EnvStep],
+    confirm: str | None = None,
+) -> str:
+    """
+    A task that runs ``steps`` in order, and stops at the first that fails.
+    It first prints the whole chain; each step then prints its own banner.
+    """
+    lines = [
+        f'[tasks."{name}"]',
+        f'description = "{emoji} {summary}: ' + " → ".join(s.name for s in steps) + '"',
+    ]
+    if confirm:
+        lines.append(f'confirm = "{confirm}"')
+    lines.append("run = [")
+    lines.append(f"    \"echo '=== {name}: {summary}, in this order ==='\",")
+    for i, step in enumerate(steps, start=1):
+        lines.append(f"    \"echo '  {i}. {step.name}: {step.summary}'\",")
+    for step in steps:
+        lines.append(f'    {{ task = "{step.name}" }},')
+    lines.append(f"    \"echo '=== {name}: done ==='\",")
+    lines.append("]")
+    return "\n".join(lines)
+
+
+def _render_env_tasks(env_name: str, agentcore_target: StackTarget) -> str:
+    """
+    The tasks of one environment that are not about one CDK stack: the
+    AgentCore and config steps, then the two chains that run them in order:
+
+    - ``ac-chain-up-<env>``: config → ``agentcore_deps`` stack → AgentCore runtimes.
+    - ``ac-chain-down-<env>``: the reverse; it asks for confirmation first
+      (``mise run --yes`` skips the prompt).
+    """
+    steps = get_env_steps(env_name, agentcore_target)
+    parts = [
+        _render_step(steps[key], env_name)
+        for key in ["config_deploy", "config_delete", "ac_deploy", "ac_down"]
+    ]
+    parts.append(
+        _render_chain(
+            name=f"ac-chain-up-{env_name}",
+            emoji="🚀",
+            summary=f"Deploy everything AgentCore of {env_name}",
+            steps=[steps["config_deploy"], steps["deps_up"], steps["ac_deploy"]],
+        )
+    )
+    parts.append(
+        _render_chain(
+            name=f"ac-chain-down-{env_name}",
+            emoji="🔴",
+            summary=f"Destroy everything AgentCore of {env_name}",
+            steps=[steps["ac_down"], steps["deps_down"], steps["config_delete"]],
+            confirm=f"Destroy the AgentCore runtimes, the agentcore-deps stack, and the config of {env_name}?",
+        )
+    )
+    return "\n\n".join(parts)
 
 
 def _render_task(
@@ -312,9 +437,11 @@ def _render_task(
         construct_id = targets[0].construct_id
         target = f"stack {stack_slug}"
     summary = action.summary.format(target=target, env=env_name)
-    script = get_run_script(action, env_name, targets, construct_id)
+    task_name = get_task_name(action.name, env_name, stack_slug)
+    script = get_banner(task_name, summary) + "\n"
+    script += get_run_script(action, env_name, targets, construct_id)
     lines = [
-        f'[tasks."{get_task_name(action.name, env_name, stack_slug)}"]',
+        f'[tasks."{task_name}"]',
         f'description = "{action.emoji} {summary}"',
         'dir = "cdk"',
         f'env = {{ {ENV_NAME_VAR} = "{env_name}" }}',

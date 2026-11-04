@@ -67,7 +67,7 @@ mise run build-doc
 
 Then start its MCP servers and the agent with the `ac-local-*` tasks, and send the sample payload. That calls the Bedrock model with the dev profile: say so before running it. `ac-dev-<slug>` also needs the config deployed (`config-deploy-<env>`), which changes AWS: ask first.
 
-Deploying is a separate step with the user's yes, in the order of `11`.
+Deploying is a separate step with the user's yes (`11`): `mise run ac-chain-up-<env>` for the whole chain, or only `ac-deploy-<env>` when only code changed.
 
 ## 4. Report
 

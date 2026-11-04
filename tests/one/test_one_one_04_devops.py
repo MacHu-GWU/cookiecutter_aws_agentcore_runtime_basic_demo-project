@@ -69,8 +69,13 @@ def test_check_agentcore_deps(config: Config, capsys):
         one = One()
         one.config = config
         one.iam_client = boto3.client("iam", region_name="us-east-1")
+        one.ssm_client = boto3.client("ssm", region_name="us-east-1")
+        # neither exists
         assert one.check_agentcore_deps() is False
-        assert "cdk-up-dev-agentcore-deps-stack" in capsys.readouterr().out
+        out = capsys.readouterr().out
+        assert "cdk-up-dev-agentcore-deps-stack" in out
+        assert "config-deploy-dev" in out
+        # only the policy exists
         one.iam_client.create_policy(
             PolicyName=config.iam_policy_name_agentcore_runtime,
             PolicyDocument=json.dumps(
@@ -86,7 +91,18 @@ def test_check_agentcore_deps(config: Config, capsys):
                 }
             ),
         )
-        assert check_agentcore_deps(config=config, iam_client=one.iam_client) is True
+        assert one.check_agentcore_deps() is False
+        assert "config-deploy-dev" in capsys.readouterr().out
+        # both exist
+        one.deploy_config()
+        assert (
+            check_agentcore_deps(
+                config=config,
+                iam_client=one.iam_client,
+                ssm_client=one.ssm_client,
+            )
+            is True
+        )
 
 
 if __name__ == "__main__":
