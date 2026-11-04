@@ -24,6 +24,7 @@ For a question, read only the file that covers it.
 - **MCP Runtimes and Tools** (`references/09-mcp-tools.md`): Read before adding or changing an MCP tool, a query, an ORM model, or a result model, or when writing a new MCP runtime.
 - **Local Development** (`references/10-local-dev.md`): Read before running a runtime locally, when a local port is taken, or when a local call reaches the wrong server.
 - **Deploy and Troubleshoot** (`references/11-deploy-and-troubleshoot.md`): Read before deploying, after a deploy or an invocation fails, or when a deployed runtime returns 500.
+- **Upgrading the AgentCore CLI** (`references/12-cli-upgrade.md`): Read before upgrading the AgentCore CLI, or when the CLI behaves differently than the other references say.
 
 <!-- END references index -->
 
@@ -42,6 +43,11 @@ For a question, read only the file that covers it.
 | Run locally | `10` |
 | Deploy, or fix a failed deploy or invocation | `11` |
 | A slow invocation | `02` |
+| Upgrade the AgentCore CLI | `12` |
+
+## Scripts
+
+- `scripts/check_cdk_layout.py`: compare `agentcore/cdk/` with a fresh `agentcore create` of the installed CLI (`12`). Stdlib only; `mise run ac-check-layout` runs it.
 
 ## Invokers
 

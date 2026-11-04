@@ -77,14 +77,14 @@ run = "open htmlcov/index.html"
 
 # Code Quality
 [tasks.format]
-description = "🎨 Format all Python code with ruff (package, tests, CDK app, mise task scripts, pywf-oss skill scripts)"
-run = "uvx ruff format cookiecutter_aws_agentcore_runtime_basic_demo tests tests_int cdk .mise/tasks .claude/skills/pywf-oss-base"
+description = "🎨 Format all Python code with ruff (package, tests, CDK app, mise task scripts, skill scripts)"
+run = "uvx ruff format cookiecutter_aws_agentcore_runtime_basic_demo tests tests_int cdk .mise/tasks .claude/skills/pywf-oss-base .claude/skills/aws-agentcore-base"
 
 [tasks.lint]
 description = "🔍 Lint Python code with ruff (unused/undefined names) and check one imported name per statement"
 run = """
-uvx ruff check --select F401,F821,F841 cookiecutter_aws_agentcore_runtime_basic_demo tests tests_int cdk .mise/tasks .claude/skills/pywf-oss-base
-python3 .claude/skills/pywf-oss-base/scripts/check_one_import_per_line.py --paths cookiecutter_aws_agentcore_runtime_basic_demo tests tests_int cdk .mise/tasks .claude/skills/pywf-oss-base
+uvx ruff check --select F401,F821,F841 cookiecutter_aws_agentcore_runtime_basic_demo tests tests_int cdk .mise/tasks .claude/skills/pywf-oss-base .claude/skills/aws-agentcore-base
+python3 .claude/skills/pywf-oss-base/scripts/check_one_import_per_line.py --paths cookiecutter_aws_agentcore_runtime_basic_demo tests tests_int cdk .mise/tasks .claude/skills/pywf-oss-base .claude/skills/aws-agentcore-base
 """
 
 # AgentCore, local (no AWS)
@@ -151,6 +151,10 @@ run = [
     "AWS_PROFILE=$AWS_PROFILE_FOR_DEV AWS_REGION=us-east-1 MCP_URL=http://localhost:$LOCAL_MCP_PORT/mcp agentcore dev --agent SiteAgent --no-traces --port $LOCAL_AGENT_PORT",
 ]
 depends = ["ac-gen"]
+
+[tasks.ac-check-layout]
+description = "🔎 Compare agentcore/cdk/ with a fresh `agentcore create` of the installed AgentCore CLI (run after upgrading the CLI; no AWS call)"
+run = ".venv/bin/python .claude/skills/aws-agentcore-base/scripts/check_cdk_layout.py"
 
 [tasks.ac-invoke-dev-agent]
 description = "🤖 Ask the deployed dev SiteAgent the demo question"
