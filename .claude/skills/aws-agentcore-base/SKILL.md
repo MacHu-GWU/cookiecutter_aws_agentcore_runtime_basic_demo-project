@@ -45,4 +45,9 @@ For a question, read only the file that covers it.
 
 ## Invokers
 
-None yet. Each future `aws-agentcore-<action>` skill loads this one and lists here which references it reads.
+Each loads this skill, then reads the references listed. Keep both lists in step when either changes.
+
+| Invoker | Job | Reads |
+| :--- | :--- | :--- |
+| `aws-agentcore-new-mcp` | add an MCP server runtime | `03`, `04`, `05`, `06`, `07`, `09`, `10`; `08` if an agent calls it; `11` before a deploy |
+| `aws-agentcore-new-agent` | add an agent runtime | `03`, `04`, `05`, `06`, `07`, `08`, `10`; `02` when latency matters; `11` before a deploy |

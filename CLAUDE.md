@@ -61,6 +61,9 @@ This repo follows the pywf open-source Python library template. **Before creatin
 | Install an optional community skill, or catalog one | `pywf-oss-add-community-skill` |
 | Check the repo against the template | `pywf-oss-audit` |
 | Config, credentials, stacks, CDK tasks and tests | `pywf-aws-cdk-base` |
+| An AgentCore question, or AgentCore work no invoker covers | `aws-agentcore-base` |
+| Add an MCP server runtime | `aws-agentcore-new-mcp` |
+| Add an agent runtime | `aws-agentcore-new-agent` |
 | Not sure which | `pywf-oss-base` |
 
 <!-- END pywf-oss template block -->
