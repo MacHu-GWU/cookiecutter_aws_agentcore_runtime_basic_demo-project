@@ -15,7 +15,7 @@ description: "The split between the AgentCore stack (deployed by the AgentCore C
 
 The AgentCore side only **refers** to the rest, by names from the config, through fields of `agentcore.json` that `ac-gen` fills in. No CloudFormation export or import is needed: every name and ARN is a deterministic config property.
 
-So `cdk-stack.ts` stays the CLI's template plus one line, `runtime('PowerPlantMcp').bind(runtime('SiteAgent'))`. `bind` must stay there: it needs the MCP runtime's ARN, which exists only inside the AgentCore stack.
+So `cdk-stack.ts` stays the CLI's template plus the `bind()` lines, such as `runtime('PowerPlantMcp').bind(runtime('SiteAgent'))`, inside `if (this.application.runtimes.size > 0)` so an empty project (teardown) still synthesizes. `bind` must stay there: it needs the MCP runtime's ARN, which exists only inside the AgentCore stack.
 
 ---
 

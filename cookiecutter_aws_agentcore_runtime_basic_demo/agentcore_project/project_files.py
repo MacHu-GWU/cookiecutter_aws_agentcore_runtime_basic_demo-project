@@ -105,6 +105,20 @@ def build_agentcore_json(config: Config) -> dict:
     }
 
 
+def build_empty_agentcore_json(config: Config) -> dict:
+    """
+    The content of ``agentcore/agentcore.json`` that declares nothing, the shape
+    ``agentcore create`` writes for an empty project. ``agentcore deploy --yes``
+    of it destroys the target's stack and removes the target from
+    ``agentcore/.cli/deployed-state.json``: the CLI's own teardown.
+    """
+    return {
+        "name": config.agentcore_project_name,
+        "version": 2,
+        "managedBy": "CDK",
+    }
+
+
 def build_aws_targets_json(config: Config) -> list[dict]:
     """
     The content of ``agentcore/aws-targets.json``: the one target of the

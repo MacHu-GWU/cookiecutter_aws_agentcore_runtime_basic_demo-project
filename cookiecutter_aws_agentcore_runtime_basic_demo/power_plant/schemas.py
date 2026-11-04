@@ -83,3 +83,18 @@ class TechnicianDetail(TechnicianInfo):
     # fmt: off
     sites: list[SiteInfo] = Field(description="Sites the technician is assigned to, by ID.")
     # fmt: on
+
+
+class WeatherForecast(BaseModel):
+    """
+    Tomorrow's weather forecast for a location.
+    """
+
+    # fmt: off
+    lat: float = Field(description="Latitude in degrees.")
+    lon: float = Field(description="Longitude in degrees.")
+    condition: str = Field(description="sunny, cloudy, rain, or thunderstorm.")
+    wind_speed_ms: int = Field(description="Wind speed in meters per second.")
+    temperature_c: int = Field(description="Temperature in degrees Celsius.")
+    safe_for_inspection: bool = Field(description="False on a thunderstorm or when the wind is above the safe limit for climbing a turbine or a roof.")
+    # fmt: on

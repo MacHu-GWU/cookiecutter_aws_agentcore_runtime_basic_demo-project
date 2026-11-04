@@ -10,6 +10,9 @@ from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.project_fil
     build_agentcore_json,
 )
 from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.project_files import (
+    build_empty_agentcore_json,
+)
+from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.project_files import (
     build_aws_targets_json,
 )
 from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.project_files import (
@@ -53,6 +56,21 @@ def test_cdk_stack_ts_uses_the_runtime_names():
     content = path_enum.path_agentcore_cdk_stack_ts.read_text(encoding="utf-8")
     for spec in get_runtime_specs(config):
         assert f"runtime('{spec.name}')" in content
+
+
+def test_build_empty_agentcore_json(config: Config):
+    """The shape `agentcore create` writes for an empty project: no runtimes key."""
+    assert build_empty_agentcore_json(config) == {
+        "name": "MyProject",
+        "version": 2,
+        "managedBy": "CDK",
+    }
+
+
+def test_cdk_stack_ts_synthesizes_an_empty_project():
+    """bind() is skipped when the project declares no runtime (ac-down-<env>)."""
+    content = path_enum.path_agentcore_cdk_stack_ts.read_text(encoding="utf-8")
+    assert "if (this.application.runtimes.size > 0)" in content
 
 
 def test_build_aws_targets_json(config: Config):

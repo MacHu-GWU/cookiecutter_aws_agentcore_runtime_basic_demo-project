@@ -17,6 +17,7 @@ def test():
     _ = api.TechnicianInfo
     _ = api.SiteDetail
     _ = api.TechnicianDetail
+    _ = api.WeatherForecast
     _ = api.list_sites
     _ = api.list_assets
     _ = api.get_site

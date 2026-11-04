@@ -23,7 +23,10 @@ export class AgentCoreStack extends Stack {
     // bedrock-agentcore:InvokeAgentRuntime on the MCP runtime and sets the agent's env var
     // AGENTCORE_RUNTIME_POWERPLANTMCP_ARN to its ARN. The runtime names come from
     // agentcore.json, generated from the config (agentcore_runtime_name_* in config_01_name.py).
-    this.application.runtime('PowerPlantMcp').bind(this.application.runtime('SiteAgent'));
+    // An empty project (`mise run ac-down-<env>`) declares no runtime, and must still synthesize.
+    if (this.application.runtimes.size > 0) {
+      this.application.runtime('PowerPlantMcp').bind(this.application.runtime('SiteAgent'));
+    }
 
     // Only AgentCore wiring belongs here. What the runtimes use but is not AgentCore
     // (IAM policies, databases, buckets, ...) is deployed by the agentcore_deps CDK stack

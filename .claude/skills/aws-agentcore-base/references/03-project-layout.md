@@ -36,7 +36,7 @@ Never edit a generated file; change its source and run `ac-gen`. Every `ac-*` ta
 | `<pkg>/config/`, `<pkg>/one/`, `env.py`, `runtime.py`, `constants.py` | config, singletons, runtime detection (`06`); also copied into every runtime | yes |
 | `<pkg>/cdk/stacks/agentcore_deps_stack.py` | what the runtimes use but is not AgentCore (`07`) | yes |
 | `agentcore/cdk/` | the CLI's CDK app (TypeScript): `bin/cdk.ts`, `lib/cdk-stack.ts`, `package.json`, `package-lock.json` | yes, without `node_modules/`, `cdk.out/`, `dist/` |
-| `agentcore/.cli/deployed-state.json` | the CLI's record of deployed targets | yes, for now |
+| `agentcore/.cli/deployed-state.json` | the CLI's record of deployed targets | yes, as the CLI's template intends (`11`) |
 | `agentcore/.cli/*` (other), `agentcore/.env*.local`, `agentcore/.cache/` | CLI scratch | no |
 | `agentcore/agentcore.json`, `agentcore/aws-targets.json`, `app/` | generated (section 1) | no |
 

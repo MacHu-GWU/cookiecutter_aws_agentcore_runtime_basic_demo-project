@@ -252,6 +252,20 @@ echo 'AWS_PROFILE={{env.AWS_PROFILE_FOR_DEV}} agentcore deploy --target dev'
 AWS_PROFILE={{env.AWS_PROFILE_FOR_DEV}} agentcore deploy --target dev
 """
 
+[tasks."ac-down-dev"]
+description = "🔴 Destroy every AgentCore runtime of the dev target: deploy an empty project with --yes, then generate the real one again (writes to AWS; keeps the agentcore-deps stack and the config)"
+env = { ENV_NAME = "dev" }
+depends = ["inst"]
+run = """
+echo '--- CloudFormation console ---'
+echo 'AgentCore stack: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=AgentCore-AcRtDemo-dev&filteringStatus=active&viewNested=true'
+.venv/bin/python .mise/tasks/ac-gen-teardown.py
+echo '--- Run command ---'
+echo 'AWS_PROFILE={{env.AWS_PROFILE_FOR_DEV}} agentcore deploy --target dev --yes'
+AWS_PROFILE={{env.AWS_PROFILE_FOR_DEV}} agentcore deploy --target dev --yes
+.venv/bin/python .mise/tasks/ac-gen.py
+"""
+
 [tasks."cdk-synth-dev-all"]
 description = "⚪ Synthesize all stacks of dev to CloudFormation templates (no AWS call)"
 dir = "cdk"
@@ -495,6 +509,20 @@ echo 'AWS_PROFILE={{env.AWS_PROFILE_FOR_TST}} agentcore deploy --target tst'
 AWS_PROFILE={{env.AWS_PROFILE_FOR_TST}} agentcore deploy --target tst
 """
 
+[tasks."ac-down-tst"]
+description = "🔴 Destroy every AgentCore runtime of the tst target: deploy an empty project with --yes, then generate the real one again (writes to AWS; keeps the agentcore-deps stack and the config)"
+env = { ENV_NAME = "tst" }
+depends = ["inst"]
+run = """
+echo '--- CloudFormation console ---'
+echo 'AgentCore stack: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=AgentCore-AcRtDemo-tst&filteringStatus=active&viewNested=true'
+.venv/bin/python .mise/tasks/ac-gen-teardown.py
+echo '--- Run command ---'
+echo 'AWS_PROFILE={{env.AWS_PROFILE_FOR_TST}} agentcore deploy --target tst --yes'
+AWS_PROFILE={{env.AWS_PROFILE_FOR_TST}} agentcore deploy --target tst --yes
+.venv/bin/python .mise/tasks/ac-gen.py
+"""
+
 [tasks."cdk-synth-tst-all"]
 description = "⚪ Synthesize all stacks of tst to CloudFormation templates (no AWS call)"
 dir = "cdk"
@@ -736,6 +764,20 @@ echo 'AgentCore stack: https://us-east-1.console.aws.amazon.com/cloudformation/h
 echo '--- Run command ---'
 echo 'AWS_PROFILE={{env.AWS_PROFILE_FOR_PRD}} agentcore deploy --target prd'
 AWS_PROFILE={{env.AWS_PROFILE_FOR_PRD}} agentcore deploy --target prd
+"""
+
+[tasks."ac-down-prd"]
+description = "🔴 Destroy every AgentCore runtime of the prd target: deploy an empty project with --yes, then generate the real one again (writes to AWS; keeps the agentcore-deps stack and the config)"
+env = { ENV_NAME = "prd" }
+depends = ["inst"]
+run = """
+echo '--- CloudFormation console ---'
+echo 'AgentCore stack: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=AgentCore-AcRtDemo-prd&filteringStatus=active&viewNested=true'
+.venv/bin/python .mise/tasks/ac-gen-teardown.py
+echo '--- Run command ---'
+echo 'AWS_PROFILE={{env.AWS_PROFILE_FOR_PRD}} agentcore deploy --target prd --yes'
+AWS_PROFILE={{env.AWS_PROFILE_FOR_PRD}} agentcore deploy --target prd --yes
+.venv/bin/python .mise/tasks/ac-gen.py
 """
 
 [tasks."cdk-synth-prd-all"]

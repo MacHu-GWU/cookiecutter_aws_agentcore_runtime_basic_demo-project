@@ -107,12 +107,12 @@ def test_assemble_runtime_dir(tmp_path):
 def test_check_codezip_install(tmp_path):
     """
     The locked dependencies install as ``agentcore deploy`` installs them; a
-    version published without wheels (SQLAlchemy 2.1.7) does not.
+    requirement that cannot be met fails, with uv's message naming the package.
     """
     path = tmp_path / "pyproject.toml"
     path.write_text(render_pyproject_toml("SiteAgent", export_requirements()))
     assert check_codezip_install(path) is None
-    path.write_text(render_pyproject_toml("SiteAgent", ["sqlalchemy==2.1.7"]))
+    path.write_text(render_pyproject_toml("SiteAgent", ["sqlalchemy==0.0.1"]))
     error = check_codezip_install(path)
     assert "aarch64-manylinux_2_34" in error
     assert "sqlalchemy" in error

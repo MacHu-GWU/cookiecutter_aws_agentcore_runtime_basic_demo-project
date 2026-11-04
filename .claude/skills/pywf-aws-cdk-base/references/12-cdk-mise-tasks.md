@@ -34,6 +34,7 @@ This project adds, per environment, in the same block:
 | `config-deploy-<env>` / `config-deploy-all` | `one.deploy_config()`: the whole config as JSON to SSM `config.ssm_param_name_config`, a `SecureString`, only if it changed | changes |
 | `config-delete-<env>` / `config-delete-all` | `one.delete_config()` | changes |
 | `ac-deploy-<env>` | after `config-deploy-<env>`: check that the `agentcore_deps` stack is deployed, `ac-gen` for `<env>`, then `agentcore deploy --target <env>` | changes |
+| `ac-down-<env>` | `agentcore deploy --target <env> --yes` of an empty generated project (destroys its runtimes), then `ac-gen` again | changes |
 
 ---
 
@@ -46,5 +47,5 @@ This project adds, per environment, in the same block:
 ## 4. The user's yes
 
 - Run freely: `synth`, `plan`, `cdk ls`, `gen-env-tasks`, `print-cdk-stack-urls`.
-- `up`, `down`, `config-deploy`, `config-delete`, and `ac-deploy` change AWS: run them only after the user's yes, one environment per yes. `mise run int-test` reads deployed stacks; ask before relying on it.
+- `up`, `down`, `config-deploy`, `config-delete`, `ac-deploy`, and `ac-down` change AWS: run them only after the user's yes, one environment per yes. `mise run int-test` reads deployed stacks; ask before relying on it.
 - To run one stack yourself, call the cdk CLI from `cdk/`: `ENV_NAME=<env> mise exec -- cdk diff <stack_name> --exclusively --profile "$AWS_PROFILE_FOR_<ENV>"`. For a cdk option, see the `aws-cdk-cli-ref` skill.

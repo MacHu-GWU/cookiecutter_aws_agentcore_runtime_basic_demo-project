@@ -12,6 +12,7 @@ from ..env import env
 from ..config.api import Config
 from .project_files import get_runtime_specs
 from .project_files import build_agentcore_json
+from .project_files import build_empty_agentcore_json
 from .project_files import build_aws_targets_json
 from .project_files import write_json
 from .runtime_dir import export_requirements
@@ -38,8 +39,27 @@ def generate_all(config: Config) -> None:
     print(f"Generated the AgentCore project files for {config.env_name!r}")
 
 
+def generate_teardown(config: Config) -> None:
+    """
+    Write an ``agentcore/agentcore.json`` that declares nothing, and the
+    ``agentcore/aws-targets.json`` of the environment of ``config``, for
+    ``agentcore deploy --yes`` to destroy that target's stack. ``app/`` is left
+    alone. Run :func:`generate_all` afterwards to get the real project back.
+    """
+    write_json(path_enum.path_agentcore_json, build_empty_agentcore_json(config))
+    write_json(path_enum.path_aws_targets_json, build_aws_targets_json(config))
+    print(f"Generated an empty AgentCore project for {config.env_name!r}")
+
+
 def main():
     """
     Generate with the local config files of the current environment.
     """
     generate_all(Config.load_from_local_config_file(env_name=env.current_env_name))
+
+
+def main_teardown():
+    """
+    :func:`generate_teardown` with the local config files of the current environment.
+    """
+    generate_teardown(Config.load_from_local_config_file(env_name=env.current_env_name))

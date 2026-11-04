@@ -4,10 +4,12 @@
 A fake weather forecast, used as the agent's own (non-MCP) tool.
 
 The result is deterministic for a location, so tests and demos are repeatable,
-and it needs no network.
+and it needs no network. Strands sends the returned model to the LLM as JSON.
 """
 
 from __future__ import annotations
+
+from .schemas import WeatherForecast
 
 #: Possible conditions, picked by the location.
 CONDITIONS: list[str] = ["sunny", "cloudy", "rain", "thunderstorm"]
@@ -16,7 +18,7 @@ CONDITIONS: list[str] = ["sunny", "cloudy", "rain", "thunderstorm"]
 MAX_SAFE_WIND_SPEED_MS: int = 12
 
 
-def get_weather(lat: float, lon: float) -> dict:
+def get_weather(lat: float, lon: float) -> WeatherForecast:
     """
     Get tomorrow's fake weather forecast for a location.
 
@@ -29,11 +31,11 @@ def get_weather(lat: float, lon: float) -> dict:
     wind_speed_ms = seed % 20
     temperature_c = 5 + seed % 30
     safe = condition != "thunderstorm" and wind_speed_ms <= MAX_SAFE_WIND_SPEED_MS
-    return {
-        "lat": lat,
-        "lon": lon,
-        "condition": condition,
-        "wind_speed_ms": wind_speed_ms,
-        "temperature_c": temperature_c,
-        "safe_for_inspection": safe,
-    }
+    return WeatherForecast(
+        lat=lat,
+        lon=lon,
+        condition=condition,
+        wind_speed_ms=wind_speed_ms,
+        temperature_c=temperature_c,
+        safe_for_inspection=safe,
+    )

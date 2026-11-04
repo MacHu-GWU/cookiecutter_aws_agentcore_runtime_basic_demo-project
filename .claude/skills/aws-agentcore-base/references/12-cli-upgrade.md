@@ -63,6 +63,7 @@ Each was read from the CLI's bundled source (`main.js`) or `@aws/agentcore-cdk`,
 | The CLI installs `[project].dependencies` of the runtime's `pyproject.toml` and ignores `uv.lock` | the pinned export in `runtime_dir.py` (`04`) | `lib/packaging/python.js` |
 | `bind()` sets `AGENTCORE_RUNTIME_<NAME>_ARN` and grants `InvokeAgentRuntime` | `MCP_ARN_ENV_VAR` in `site_agent.py` (`08`) | `bind(` in `AgentCoreRuntime.js` |
 | An HTTP runtime runs under `agentcore dev` as `uvicorn main:app --reload` | the `app` export of the generated `main.py` (`04`) | `commandForRuntime` |
-| `.gitignore` of a fresh project commits `agentcore/.cli/deployed-state.json` | keeping it in git (`11`, section 5) | the root `.gitignore` the CLI writes |
+| `.gitignore` of a fresh project commits `agentcore/.cli/deployed-state.json` | keeping it in git (`11`, section 6) | the root `.gitignore` the CLI writes |
+| `deploy --yes` of a project that declares nothing destroys the target's stack and removes its state | `ac-down-<env>` (`11`, section 5) | `teardown(` |
 
 If one changed, fix the code that relies on it and the reference that describes it, in the same change.

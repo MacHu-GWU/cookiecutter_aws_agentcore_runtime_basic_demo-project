@@ -16,6 +16,7 @@ from .schemas import AssetInfo
 from .schemas import TechnicianInfo
 from .schemas import SiteDetail
 from .schemas import TechnicianDetail
+from .schemas import WeatherForecast
 from .queries import list_sites
 from .queries import list_assets
 from .queries import get_site

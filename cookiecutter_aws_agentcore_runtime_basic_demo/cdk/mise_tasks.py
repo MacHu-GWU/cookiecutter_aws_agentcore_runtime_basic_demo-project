@@ -9,7 +9,8 @@ of the stacks it acts on, then runs one plain cdk command in ``cdk/`` with
 Per environment it also renders ``config-deploy-<env>``, ``config-delete-<env>``,
 and ``ac-deploy-<env>`` (after deploying the config: check that the
 ``agentcore_deps`` stack is deployed, run ``ac-gen`` for ``<env>``, check the
-runtimes' dependencies have Linux wheels, then ``agentcore deploy``), and
+runtimes' dependencies have Linux wheels, then ``agentcore deploy``) and
+``ac-down-<env>`` (``agentcore deploy --yes`` of an empty project), and
 then ``config-deploy-all`` and ``config-delete-all``.
 
 The stacks are the entries of :class:`~cookiecutter_aws_agentcore_runtime_basic_demo.cdk.stack_ctx_enum.StackCtxEnum`,
@@ -257,6 +258,18 @@ def _render_env_tasks(env_name: str, agentcore_target: StackTarget) -> str:
             deploy_command,
         ]
     )
+    down_command = f"AWS_PROFILE={{{{env.{profile_var}}}}} agentcore deploy --target {target_name} --yes"
+    down_script = "\n".join(
+        [
+            "echo '--- CloudFormation console ---'",
+            f"echo 'AgentCore stack: {agentcore_target.console_url}'",
+            ".venv/bin/python .mise/tasks/ac-gen-teardown.py",
+            "echo '--- Run command ---'",
+            f"echo '{down_command}'",
+            down_command,
+            ".venv/bin/python .mise/tasks/ac-gen.py",
+        ]
+    )
     config_deploy_task_name = get_config_task_name("deploy", env_name)
     lines = [
         f'[tasks."{config_deploy_task_name}"]',
@@ -276,6 +289,12 @@ def _render_env_tasks(env_name: str, agentcore_target: StackTarget) -> str:
         f'env = {{ {ENV_NAME_VAR} = "{env_name}" }}',
         f'depends = ["inst", "{config_deploy_task_name}"]',
         f'run = """\n{deploy_script}\n"""',
+        "",
+        f'[tasks."ac-down-{env_name}"]',
+        f'description = "🔴 Destroy every AgentCore runtime of the {target_name} target: deploy an empty project with --yes, then generate the real one again (writes to AWS; keeps the agentcore-deps stack and the config)"',
+        f'env = {{ {ENV_NAME_VAR} = "{env_name}" }}',
+        'depends = ["inst"]',
+        f'run = """\n{down_script}\n"""',
     ]
     return "\n".join(lines)
 

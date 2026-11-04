@@ -63,7 +63,7 @@ def mcp_url():
 
 def test_get_weather():
     assert get_weather.tool_name == "get_weather"
-    assert get_weather(41.1, -105.9)["safe_for_inspection"] is False
+    assert get_weather(41.1, -105.9).safe_for_inspection is False
 
 
 def test_strip_thinking():

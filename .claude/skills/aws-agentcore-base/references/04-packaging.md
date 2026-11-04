@@ -56,7 +56,7 @@ for `aarch64-manylinux2014`, then `_2_28`, then `_2_34`, and keeps the first tha
 mise run ac-gen && .venv/bin/python .mise/tasks/ac-check-wheels.py
 ```
 
-The fix for a version without wheels: exclude it in `pyproject.toml` with a comment (`sqlalchemy>=2.0.0,<3.0.0,!=2.1.7`: 2.1.7 was published as an sdist only), then `uv lock`. A package with no aarch64 wheel at all cannot be used in a CodeZip runtime; use a container build instead.
+The fix for a version without wheels: constrain it out in `pyproject.toml` with a comment (an upper bound, or `!=<version>`), then `uv lock`. A release can reach PyPI before its wheels do: SQLAlchemy 2.1.7 was an sdist only for a while, which failed a deploy here, so this repo pins `sqlalchemy<2.1.0`. A package with no aarch64 wheel at all cannot be used in a CodeZip runtime; use a container build instead.
 
 ---
 
