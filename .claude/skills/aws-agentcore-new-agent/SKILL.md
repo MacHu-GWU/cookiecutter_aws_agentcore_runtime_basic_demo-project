@@ -41,12 +41,13 @@ Then propose, in one message:
 2. **Model in the config** (`06`): a `<snake>_model_id` field in `Config`, its value in `config/config-shared.json5` (or per environment), `config/example/`, the `config` fixture in `tests/conftest.py`, and the inline config of `test_load_from_local_config_file`.
 3. **Shared MCP connection code.** `AwsSigV4Auth` and `get_runtime_mcp_url` live in `runtimes/site_agent.py`. Before a second agent uses them, move them to a shared module, such as `runtimes/mcp_connection.py`, with their tests, and import them from both agents. Do not copy them.
 4. **Runtime module**: copy the shape of `runtimes/site_agent.py`:
-   - `app = BedrockAgentCoreApp()` and an `@app.entrypoint` `invoke(payload)` that builds the agent with `one.config.<snake>_model_id` and its MCP connections, calls it, and returns a JSON-friendly dict.
+   - `app = BedrockAgentCoreApp()` and an `@app.entrypoint` `invoke(payload)` that, under a lock, calls the agent of the process and returns a JSON-friendly dict.
+   - One agent per process (`08`, section 4): `get_agent()` builds it on first use with `one.config.<snake>_model_id` and its MCP connections; `reset_agent()` drops it when a call fails.
    - One `get_<mcp>_connection()` per MCP runtime, with the three cases of `08`, section 2, and its own local URL variable.
    - Credentials and the SigV4 signer created inside `invoke`, never at import time (`08`, section 3).
    - `main()` that prints the config source (`06`, section 5) then `app.run()`.
    - If the model wraps its answer in tags, reuse `strip_thinking`.
-   Test it like `tests/runtimes/test_runtimes_site_agent.py`: the connection cases, the agent loads every tool against a real local MCP server (no LLM call), `invoke` with a fake agent, `main()`.
+   Test it like `tests/runtimes/test_runtimes_site_agent.py`: the connection cases, the agent loads every tool against a real local MCP server (no LLM call), `invoke` with fake agents (reused across calls, reset after a failure), `main()`.
 5. **Register it**: a `RuntimeSpec(name=..., module="runtimes.<snake>_agent", protocol="HTTP")` in `get_runtime_specs()`; update `test_get_runtime_specs`. The `HTTP` protocol makes the generated `main.py` expose `app` too (`04`, section 1).
 6. **Bind its MCP runtimes**: a `this.application.runtime('<Mcp>').bind(this.application.runtime('<Agent>'))` line per MCP runtime in `agentcore/cdk/lib/cdk-stack.ts` (`08`). Nothing else goes in that file (`07`).
 7. **Permissions** (`07`): the CLI-created role can already call Bedrock models; add statements to the `agentcore_deps` policy only for other AWS access the agent's own tools need.

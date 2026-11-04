@@ -7,12 +7,20 @@ the ``PowerPlantMcp`` tools plus its own ``get_weather`` tool.
 AgentCore Runtime (protocol ``HTTP``) expects ``POST /invocations`` and
 ``GET /ping`` on port 8080; :class:`BedrockAgentCoreApp` provides both, and the
 same server runs locally.
+
+**One agent per process.** AgentCore gives each runtime session its own microVM
+and process, so the agent built on the first invocation serves the whole session:
+its MCP connection, and so its MCP session, stays open (the PowerPlantMcp microVM
+stays warm), and it remembers the earlier turns of the conversation. Callers
+continue a conversation by sending the same runtime session ID.
 """
 
 from __future__ import annotations
 
 import os
 import re
+import threading
+import contextlib
 import urllib.parse
 
 import boto3
@@ -139,7 +147,7 @@ def make_agent(
 ) -> Agent:
     """
     Create the agent on the Bedrock model ``model_id``, connected to the MCP
-    server at ``mcp_url``. Call ``agent.cleanup()`` when done, to close the MCP connection.
+    server at ``mcp_url``. ``agent.cleanup()`` closes the MCP connection.
     """
     return Agent(
         model=BedrockModel(model_id=model_id),
@@ -149,6 +157,39 @@ def make_agent(
     )
 
 
+#: The agent of this process, built by :func:`get_agent` on the first invocation.
+_agent: Agent | None = None
+
+#: One invocation at a time: a Strands agent cannot run two calls at once, and
+#: the requests of one session are one conversation.
+_agent_lock = threading.Lock()
+
+
+def get_agent() -> Agent:
+    """
+    The agent of this process, built on first use with ``site_agent_model_id``
+    of the config and the PowerPlantMcp connection. Credentials and the SigV4
+    signer are made here, on the first invocation, never at import time.
+    """
+    global _agent
+    if _agent is None:
+        _agent = make_agent(one.config.site_agent_model_id, *get_mcp_connection())
+    return _agent
+
+
+def reset_agent() -> None:
+    """
+    Close and drop the agent of this process, so the next invocation builds a
+    new one with a new MCP connection. A failing cleanup is ignored: the agent
+    is dropped anyway.
+    """
+    global _agent
+    agent, _agent = _agent, None
+    if agent is not None:
+        with contextlib.suppress(Exception):
+            agent.cleanup()
+
+
 app = BedrockAgentCoreApp()
 
 
@@ -156,13 +197,18 @@ app = BedrockAgentCoreApp()
 def invoke(payload: dict) -> dict:
     """
     Answer ``payload["prompt"]``; returns ``{"result": <answer text>}``.
-    The model is ``site_agent_model_id`` of the config, loaded on the first call.
+
+    Uses the agent of this process (:func:`get_agent`). If the call fails, for
+    example because the MCP connection broke, the agent is dropped and the next
+    invocation starts over with a new one.
     """
-    agent = make_agent(one.config.site_agent_model_id, *get_mcp_connection())
-    try:
-        result = agent(payload["prompt"])
-    finally:
-        agent.cleanup()
+    with _agent_lock:
+        agent = get_agent()
+        try:
+            result = agent(payload["prompt"])
+        except Exception:
+            reset_agent()
+            raise
     return {"result": strip_thinking(str(result))}
 
 

@@ -24,6 +24,9 @@ from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import (
 from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import make_agent
 from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import app
 from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import invoke
+from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import (
+    reset_agent,
+)
 from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import main
 
 import pytest
@@ -133,23 +136,67 @@ def test_make_agent(monkeypatch, mcp_url):
 
 
 class FakeAgent:
-    def __init__(self):
+    def __init__(self, fail: bool = False):
+        self.fail = fail
+        self.prompts = []
         self.cleaned = False
 
     def __call__(self, prompt):
+        if self.fail:
+            raise ConnectionError("MCP connection lost")
+        self.prompts.append(prompt)
         return f"<thinking>hmm</thinking> answer to {prompt}"
 
     def cleanup(self):
         self.cleaned = True
+        raise RuntimeError("a failing cleanup is ignored")
 
 
-def test_invoke(monkeypatch):
+@pytest.fixture
+def fake_agents(monkeypatch):
+    """
+    Make make_agent return FakeAgent instances, recorded in the returned list,
+    and start and end the test without an agent of the process.
+    """
     monkeypatch.delenv("MCP_URL", raising=False)
     monkeypatch.delenv(MCP_ARN_ENV_VAR, raising=False)
-    fake_agent = FakeAgent()
-    monkeypatch.setattr(site_agent, "make_agent", lambda *args: fake_agent)
+    agents = []
+
+    def fake_make_agent(*args):
+        agent = FakeAgent()
+        agents.append(agent)
+        return agent
+
+    monkeypatch.setattr(site_agent, "make_agent", fake_make_agent)
+    reset_agent()
+    yield agents
+    monkeypatch.setattr(site_agent, "_agent", None)
+
+
+def test_invoke_reuses_the_agent(fake_agents):
+    """One agent serves every invocation of the process: one MCP session, one conversation."""
     assert invoke({"prompt": "hi"}) == {"result": "answer to hi"}
-    assert fake_agent.cleaned is True
+    assert invoke({"prompt": "and?"}) == {"result": "answer to and?"}
+    assert len(fake_agents) == 1
+    assert fake_agents[0].prompts == ["hi", "and?"]
+    assert fake_agents[0].cleaned is False
+
+
+def test_invoke_resets_the_agent_after_a_failure(fake_agents, monkeypatch):
+    """A failed call drops the agent, so the next invocation starts with a new one."""
+    monkeypatch.setattr(site_agent, "_agent", FakeAgent(fail=True))
+    failed = site_agent._agent
+    with pytest.raises(ConnectionError):
+        invoke({"prompt": "hi"})
+    assert failed.cleaned is True
+    assert site_agent._agent is None
+    assert invoke({"prompt": "hi"}) == {"result": "answer to hi"}
+    assert len(fake_agents) == 1
+
+
+def test_reset_agent_without_an_agent(fake_agents):
+    reset_agent()
+    assert site_agent._agent is None
 
 
 def test_main(monkeypatch):

@@ -42,15 +42,21 @@ The region is the 4th field of the ARN.
 
 A runtime without an authorizer configuration uses `AWS_IAM`: every request must be signed with SigV4 for the service `bedrock-agentcore`. `AwsSigV4Auth` is an `httpx.Auth` (`requires_request_body = True`, since the body is signed): it builds a botocore `AWSRequest` from the httpx request, signs it with `SigV4Auth(credentials, "bedrock-agentcore", region)`, and copies the headers back.
 
-It takes its credentials from `boto3.Session()` when it is created, inside the invocation, never at import time: a session's microVM is restored from a snapshot, and credentials made at import time would be stale (`02`, section 4.2).
+It takes its credentials from `boto3.Session()` when it is created, on the first invocation, never at import time: a session's microVM is restored from a snapshot, and credentials made at import time would be stale (`02`, section 4.2).
 
 To check the signing works, read the MCP runtime's log: a signed `POST /mcp` with 200 means the URL, the grant, and the signature are right. A 403 is the grant or the signature; a 404 is the URL.
 
 ---
 
-## 4. Known gap: one MCP session per invocation
+## 4. One agent per process
 
-`invoke()` builds a new agent, with a new `MCPClient`, for every request, and closes it at the end. Each request therefore opens a new MCP session, so the MCP runtime may pay a cold start each time (scenario B in `02`, section 3). The fix is one `MCPClient` per agent process, created lazily on the first request and reused (`02`, section 4.2). Do it when latency matters; the demo keeps the simple form.
+`invoke()` does not build an agent per request. `get_agent()` builds one on the first invocation and keeps it for the life of the process, which on AgentCore is one runtime session (`02`):
+
+- **The MCP session stays open.** Strands' `MCPClient` closes its connection as soon as no `Agent` uses it, so keeping the MCP connection means keeping the agent. Every request of the session then lands on the same, warm MCP microVM (scenario C in `02`, section 3). Locally, two invocations in a row make one `ListToolsRequest` on the MCP server.
+- **The agent remembers the conversation.** A follow-up such as "which of the two is also at S-04?" works within a session. Callers continue a conversation by sending the same runtime session ID, and start a new one with a new ID.
+- **One invocation at a time.** `_agent_lock` serializes them: a Strands agent cannot run two calls at once, and the requests of a session are one conversation.
+- **Start over on failure.** If a call raises (such as a broken MCP connection), `reset_agent()` closes and drops the agent, and the next invocation builds a new one with a new MCP connection; the conversation so far is lost.
+- **Credentials** are taken when the agent is built, on the first invocation; botocore refreshes them for the life of the process.
 
 ---
 
