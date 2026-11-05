@@ -5,13 +5,18 @@ description: "Add a new agent runtime (protocol HTTP, Strands on BedrockAgentCor
 
 Add one agent runtime to the project, end to end, following the patterns of `SiteAgent`.
 
-Read ../aws-agentcore-base/SKILL.md, then ../aws-agentcore-base/references/10-code-runtime.md (OP-1) and ../aws-agentcore-base/references/20-centralized-config.md (OP-2), ../aws-agentcore-base/references/30-mcp-runtime.md (OP-3), ../aws-agentcore-base/references/40-agent-runtime.md (OP-4), then the legacy references below. The base references are being rewritten one OP at a time: until then, a short citation such as `05` or `10` in this file means the legacy file of that number, `references/legacy/NN-*.md`, not the new reference with the same number.
-- ../aws-agentcore-base/references/legacy/03-project-layout.md
-- ../aws-agentcore-base/references/legacy/04-packaging.md
-- ../aws-agentcore-base/references/legacy/05-naming.md
-- ../aws-agentcore-base/references/legacy/06-runtime-and-config.md
-- ../aws-agentcore-base/references/legacy/07-agentcore-vs-other-resources.md
-- ../aws-agentcore-base/references/legacy/10-local-dev.md
+Read ../aws-agentcore-base/SKILL.md, then:
+- ../aws-agentcore-base/references/10-code-runtime.md
+- ../aws-agentcore-base/references/20-centralized-config.md
+- ../aws-agentcore-base/references/30-mcp-runtime.md
+- ../aws-agentcore-base/references/40-agent-runtime.md
+- ../aws-agentcore-base/references/50-agentcore-project-layout.md
+- ../aws-agentcore-base/references/51-agentcore-config.md
+- ../aws-agentcore-base/references/52-agentcore-packaging.md
+- ../aws-agentcore-base/references/53-agentcore-dev.md
+- ../aws-agentcore-base/references/legacy/07-agentcore-vs-other-resources.md (permissions and resources; until OP-6 is rewritten)
+
+A short citation such as `30` means the new reference of that number; a citation of `07` or `11` means the legacy file `references/legacy/NN-*.md`, until OP-6 to OP-8 are rewritten.
 
 Read ../aws-agentcore-base/references/legacy/02-runtime-sessions-and-cold-starts.md when latency matters, and ../aws-agentcore-base/references/legacy/11-deploy-and-troubleshoot.md before a deploy. Use the `aws-agentcore-new-mcp` skill first if the agent needs an MCP runtime that does not exist yet. For new modules and tests, follow the `pywf-oss-add-module` and `pywf-oss-write-test` skills.
 
@@ -28,7 +33,7 @@ Then propose, in one message:
 
 | Item | Proposal |
 | :--- | :--- |
-| Runtime name (`05`) | PascalCase ending in `Agent`, such as `DispatchAgent`; physical name within 48 characters for every environment |
+| Runtime name (`51`, section 1) | PascalCase ending in `Agent`, such as `DispatchAgent`; physical name within 48 characters for every environment |
 | Layer 1 module | `<pkg>/<domain>/<snake_name>_agent.py`: `SYSTEM_PROMPT`, `TOOLS` |
 | Runtime module | `<pkg>/runtimes/<snake_name>_agent.py` |
 | Model | config field `<snake>_model_id`, its value per environment |
@@ -38,13 +43,13 @@ Then propose, in one message:
 ## 2. Build it, in this order
 
 1. **Names.** In `config/config_01_name.py`: `agentcore_runtime_name_<snake>` and `agentcore_runtime_physical_name_<snake>`. Assert both in `tests/config/test_config_config_01_name.py`.
-2. **Model in the config** (`06`): a `<snake>_model_id` field in `Config`, its value in `config/config-shared.json5` (or per environment), `config/example/`, the `config` fixture in `tests/conftest.py`, and the inline config of `test_load_from_local_config_file`.
+2. **Model in the config** (`20`, section 5): a `<snake>_model_id` field in `Config`, its value in `config/config-shared.json5` (or per environment), `config/example/`, the `config` fixture in `tests/conftest.py`, and the inline config of `test_load_from_local_config_file`.
 3. **Layer 1** (`40-agent-runtime.md`, section 2): `<pkg>/<domain>/<snake_name>_agent.py` with `SYSTEM_PROMPT` and `TOOLS`, the tool functions, and their tests, like `power_plant/site_agent.py`.
 4. **Runtime module** (`40-agent-runtime.md`, sections 3 and 4): copy the shape of `runtimes/site_agent.py`: `make_agent`, `build_agent` (with `one.new_boto_ses()`, `one.config.<snake>_model_id`, one `get_mcp_connection` per MCP runtime), `agent = ProcessAgent(build_agent)`, `invoke`, `main()`. Reuse `runtimes/common.py` and `runtimes/mcp_connection.py`; never copy them. Test it like `tests/runtimes/test_runtimes_site_agent.py`.
-5. **Register it**: a `RuntimeSpec(name=..., module="runtimes.<snake>_agent", protocol="HTTP")` in `get_runtime_specs()`; update `test_get_runtime_specs`. The `HTTP` protocol makes the generated `main.py` expose `app` too (`04`, section 1).
-6. **Bind its MCP runtimes**: a `this.application.runtime('<Mcp>').bind(this.application.runtime('<Agent>'))` line per MCP runtime in `agentcore/cdk/lib/cdk-stack.ts` (`40-agent-runtime.md`, section 4). Nothing else goes in that file (`07`).
+5. **Register it** (`51`, section 7): a `RuntimeSpec(name=..., module="runtimes.<snake>_agent", protocol=RuntimeProtocolEnum.HTTP)` in `get_runtime_specs()` of `agentcore_project/registry.py`; update `test_get_runtime_specs`. The `HTTP` protocol makes the generated `main.py` expose `app` too (`52`, section 1).
+6. **Bind its MCP runtimes**: a `this.application.runtime('<Mcp>').bind(this.application.runtime('<Agent>'))` line per MCP runtime in `agentcore/cdk/lib/cdk-stack.ts` (`40-agent-runtime.md`, section 4). Nothing else goes in that file (`50`, section 4).
 7. **Permissions** (`07`): the CLI-created role can already call Bedrock models; add statements to the `agentcore_deps` policy only for other AWS access the agent's own tools need.
-8. **Local tasks** (`40-agent-runtime.md`, section 5; `10` for `ac-dev-*`): a port variable `LOCAL_<NAME>_PORT` in `[env]`, then `ac-local-<slug>` and `ac-dev-<slug>` copied from `ac-local-agent` / `ac-dev-agent`, with `MCP_URL` (or one variable per MCP runtime) pointing at the local MCP ports, and a `-call` task like `ac-local-agent-call` with a sample `--prompt`. For the deployed agent, a task like `ac-invoke-dev-agent`.
+8. **Local tasks** (`40-agent-runtime.md`, section 5; `53` for `ac-dev-*`): a port variable `LOCAL_<NAME>_PORT` in `[env]`, then `ac-local-<slug>` and `ac-dev-<slug>` copied from `ac-local-agent` / `ac-dev-agent`, with `MCP_URL` (or one variable per MCP runtime) pointing at the local MCP ports, and a `-call` task like `ac-local-agent-call` with a sample `--prompt`. For the deployed agent, a task like `ac-invoke-dev-agent`.
 
 ## 3. Verify
 
@@ -53,7 +58,7 @@ Run, and fix until each passes:
 ```bash
 mise run format && mise run lint
 mise run cov
-mise run ac-gen && .venv/bin/python .mise/tasks/ac-check-wheels.py
+mise run ac-check-wheels
 mise run ac-build
 mise run build-doc
 ```

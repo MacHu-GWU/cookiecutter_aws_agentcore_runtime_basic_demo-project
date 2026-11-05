@@ -122,6 +122,11 @@ description = "🏗️ Generate agentcore/agentcore.json, agentcore/aws-targets.
 run = ".venv/bin/python .mise/tasks/ac-gen.py"
 depends = ["inst"]
 
+[tasks.ac-check-wheels]
+description = "🏗️ Check every runtime's dependencies install as agentcore deploy installs them: wheels only, Linux aarch64 (dry run, no AWS call)"
+run = ".venv/bin/python .mise/tasks/ac-check-wheels.py"
+depends = ["ac-gen"]
+
 [tasks.ac-build]
 description = "🏗️ Build every runtime's CodeZip and synth the AgentCore stack of each target (no AWS calls)"
 run = "agentcore build"
@@ -129,9 +134,9 @@ depends = ["ac-gen"]
 
 # An explicit --port: without it, agentcore dev silently moves to the next free port
 # when the default one is taken, and the callers would reach the old server.
-# The servers run as the agentcore_local runtime and read the config from SSM with the
-# profile of ENV_NAME (from envVars in agentcore/agentcore.json, written by ac-gen for ENV_NAME):
-# run config-deploy-<env> first.
+# The servers run as the agentcore_local runtime: config from SSM (run config-deploy-<env>
+# first), credentials from the profile AWS_PROFILE_FOR_<ENV> of ENV_NAME (agentcore dev
+# passes on the shell's environment), region from AWS_REGION (the config is read through it).
 [tasks.ac-dev-mcp]
 description = "🏗️ Run PowerPlantMcp from app/ with `agentcore dev` on :$LOCAL_MCP_PORT, as packaged, config from SSM (call it with ac-local-mcp-call)"
 run = [
@@ -141,10 +146,10 @@ run = [
 depends = ["ac-gen"]
 
 [tasks.ac-dev-agent]
-description = "🏗️ Run SiteAgent from app/ with `agentcore dev` on :$LOCAL_AGENT_PORT with the dev profile, config from SSM (needs ac-dev-mcp; call it with ac-local-agent-call)"
+description = "🏗️ Run SiteAgent from app/ with `agentcore dev` on :$LOCAL_AGENT_PORT, as packaged, config from SSM (needs ac-dev-mcp or ac-local-mcp; call it with ac-local-agent-call)"
 run = [
     ".venv/bin/python .mise/tasks/free-port.py --port $LOCAL_AGENT_PORT",
-    "AWS_PROFILE=$AWS_PROFILE_FOR_DEV AWS_REGION=us-east-1 MCP_URL=http://localhost:$LOCAL_MCP_PORT/mcp agentcore dev --agent SiteAgent --no-traces --port $LOCAL_AGENT_PORT",
+    "AWS_REGION=us-east-1 MCP_URL=http://localhost:$LOCAL_MCP_PORT/mcp agentcore dev --agent SiteAgent --no-traces --port $LOCAL_AGENT_PORT",
 ]
 depends = ["ac-gen"]
 

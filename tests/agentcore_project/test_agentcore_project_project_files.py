@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.project_files import (
-    get_runtime_specs,
-)
-from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.project_files import (
     get_runtime_env_vars,
 )
 from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.project_files import (
@@ -23,11 +20,9 @@ import json
 
 from cookiecutter_aws_agentcore_runtime_basic_demo.paths import path_enum
 from cookiecutter_aws_agentcore_runtime_basic_demo.config.api import Config
-
-
-def test_get_runtime_specs(config: Config):
-    names = [spec.name for spec in get_runtime_specs(config)]
-    assert names == ["PowerPlantMcp", "SiteAgent"]
+from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.registry import (
+    get_runtime_specs,
+)
 
 
 def test_get_runtime_env_vars(config: Config):
@@ -41,6 +36,10 @@ def test_get_runtime_env_vars(config: Config):
 def test_build_agentcore_json(config: Config):
     data = build_agentcore_json(config)
     assert data["name"] == "MyProject"
+    assert data["version"] == 2
+    assert data["managedBy"] == "CDK"
+    assert data["runtimes"][0]["protocol"] == "MCP"
+    assert data["runtimes"][0]["runtimeVersion"] == "PYTHON_3_12"
     assert data["runtimes"][0]["codeLocation"] == "app/PowerPlantMcp"
     assert data["runtimes"][1]["protocol"] == "HTTP"
     for runtime in data["runtimes"]:

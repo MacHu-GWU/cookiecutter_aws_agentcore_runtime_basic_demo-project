@@ -1,18 +1,23 @@
 # -*- coding: utf-8 -*-
 
 """
-Assemble the code directory (``codeLocation``) of a runtime, ``app/<Runtime>/``,
-which ``agentcore build`` / ``agentcore deploy`` zip:
+Package each runtime as a CodeZip: assemble its code directory
+(``codeLocation``), ``app/<Runtime>/``, which ``agentcore build`` and
+``agentcore deploy`` zip, and check that its dependencies install the way the
+CLI installs them.
 
-- ``main.py``: a shim that calls ``main()`` of the runtime module.
-- ``pyproject.toml``: ``[project].dependencies`` = the ``agentcore`` dependency group,
-  pinned by ``uv.lock``. The CLI installs only this list and ignores ``uv.lock``.
-- a copy of the package, only the modules and subpackages the runtimes need:
-  the business code, the runtimes, and ``one`` with the config, which read the
-  config from SSM there. Never ``cdk/`` or ``agentcore_project/``.
+``app/<Runtime>/`` holds:
 
-The directory is a build output (git-ignored); the package and ``uv.lock`` stay the
-only sources of code and dependencies.
+- ``main.py``: a shim that imports and calls ``main()`` of the runtime module
+  (and exposes ``app`` for an ``HTTP`` runtime).
+- ``pyproject.toml``: ``[project].dependencies`` = the ``agentcore`` dependency
+  group, every version pinned from ``uv.lock``: the CLI installs only this list
+  and ignores ``uv.lock``.
+- a copy of only the modules and subpackages the runtimes need: never ``cdk/``,
+  ``agentcore_project/``, or ``devtools/``, which run on the dev machine only.
+
+The directory is a build output (git-ignored); the package and ``uv.lock`` stay
+the only sources of code and dependencies.
 """
 
 from __future__ import annotations
@@ -26,7 +31,8 @@ from pathlib import Path
 
 from ..paths import PACKAGE_NAME
 from ..paths import path_enum
-from .project_files import RUNTIME_PYTHON
+from .registry import RUNTIME_PYTHON
+from .registry import RuntimeProtocolEnum
 
 #: Top-level modules of the package copied into every runtime.
 RUNTIME_MODULES = ["__init__.py", "constants.py", "env.py", "paths.py", "runtime.py"]
@@ -150,7 +156,7 @@ def assemble_runtime_dir(
     dir_runtime: Path,
     name: str,
     module: str,
-    protocol: str,
+    protocol: RuntimeProtocolEnum,
     requirements: list[str],
 ) -> None:
     """
@@ -161,14 +167,14 @@ def assemble_runtime_dir(
     :param name: the runtime name in ``agentcore.json``.
     :param module: the runtime module relative to the package, such as ``runtimes.site_agent``;
         it has a ``main()``, and an ``app`` if ``protocol`` is ``HTTP``.
-    :param protocol: ``MCP`` or ``HTTP``.
+    :param protocol: how AgentCore talks to the runtime.
     :param requirements: from :func:`export_requirements`.
     """
     dir_package = dir_runtime / PACKAGE_NAME
     shutil.rmtree(dir_package, ignore_errors=True)
     dir_package.mkdir(parents=True)
     imported_names = ["main"]
-    if protocol == "HTTP":
+    if protocol == RuntimeProtocolEnum.HTTP:
         imported_names.append("app")
     imports = []
     for imported_name in imported_names:
@@ -185,3 +191,24 @@ def assemble_runtime_dir(
             dir_package / subpackage,
             ignore=shutil.ignore_patterns("__pycache__"),
         )
+
+
+def check_codezip_installs(dir_app: Path) -> bool:
+    """
+    :func:`check_codezip_install` for every runtime in ``dir_app`` (``app/``,
+    written by ``mise run ac-gen``), printing ``OK`` or uv's error for each.
+
+    :returns: ``True`` if every runtime's dependencies install.
+    """
+    ok = True
+    for path in sorted(dir_app.glob("*/pyproject.toml")):
+        error = check_codezip_install(path)
+        if error is None:
+            print(
+                f"OK: the dependencies of {path.parent.name} have Linux aarch64 wheels"
+            )
+        else:
+            print(f"ERROR: the dependencies of {path.parent.name} do not install:")
+            print(error)
+            ok = False
+    return ok

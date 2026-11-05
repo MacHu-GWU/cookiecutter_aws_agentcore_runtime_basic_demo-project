@@ -1,16 +1,19 @@
 # -*- coding: utf-8 -*-
 
-from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.runtime_dir import (
+from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.codezip import (
     check_codezip_install,
 )
-from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.runtime_dir import (
+from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.codezip import (
     export_requirements,
 )
-from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.runtime_dir import (
+from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.codezip import (
     render_pyproject_toml,
 )
-from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.runtime_dir import (
+from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.codezip import (
     assemble_runtime_dir,
+)
+from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.codezip import (
+    check_codezip_installs,
 )
 
 import sys
@@ -19,6 +22,10 @@ import tomllib
 import subprocess
 
 from cookiecutter_aws_agentcore_runtime_basic_demo.paths import PACKAGE_NAME
+from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project import codezip
+from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.registry import (
+    RuntimeProtocolEnum,
+)
 
 #: Run in a subprocess before importing the copied code: the dev-machine-only
 #: packages cannot be imported, as in a runtime, which does not install them.
@@ -73,7 +80,7 @@ def test_assemble_runtime_dir(tmp_path):
         dir_runtime=dir_runtime,
         name="SiteAgent",
         module="runtimes.site_agent",
-        protocol="HTTP",
+        protocol=RuntimeProtocolEnum.HTTP,
         requirements=["mcp==1.0.0"],
     )
     assert not path_stale.exists()
@@ -82,6 +89,9 @@ def test_assemble_runtime_dir(tmp_path):
     assert "runtimes.site_agent import main\n" in main_py
     assert "runtimes.site_agent import app\n" in main_py
     assert 'if __name__ == "__main__":' in main_py
+    # dev-machine tooling is never copied
+    for name in ["cdk", "agentcore_project", "devtools"]:
+        assert not (dir_runtime / PACKAGE_NAME / name).exists()
     code = BLOCK_DEV_PACKAGES + (
         f"import sys, json; sys.path.insert(0, {str(dir_runtime)!r}); "
         f"import {PACKAGE_NAME}.runtimes.site_agent as m; "
@@ -118,11 +128,43 @@ def test_check_codezip_install(tmp_path):
     assert "sqlalchemy" in error
 
 
+def test_assemble_mcp_runtime_dir(tmp_path):
+    """An MCP runtime's shim exposes main only: agentcore dev runs it as a script."""
+    assemble_runtime_dir(
+        dir_runtime=tmp_path,
+        name="MyMcp",
+        module="runtimes.power_plant_mcp",
+        protocol=RuntimeProtocolEnum.MCP,
+        requirements=[],
+    )
+    main_py = (tmp_path / "main.py").read_text()
+    assert "import main\n" in main_py
+    assert "import app" not in main_py
+
+
+def test_check_codezip_installs(tmp_path, monkeypatch, capsys):
+    for name in ["GoodMcp", "BadAgent"]:
+        (tmp_path / name).mkdir()
+        (tmp_path / name / "pyproject.toml").write_text("")
+
+    def fake_check(path):
+        return None if path.parent.name == "GoodMcp" else "no wheel for sqlalchemy"
+
+    monkeypatch.setattr(codezip, "check_codezip_install", fake_check)
+    assert check_codezip_installs(tmp_path) is False
+    out = capsys.readouterr().out
+    assert "OK: the dependencies of GoodMcp" in out
+    assert "ERROR: the dependencies of BadAgent" in out
+    assert "no wheel for sqlalchemy" in out
+    (tmp_path / "BadAgent" / "pyproject.toml").unlink()
+    assert check_codezip_installs(tmp_path) is True
+
+
 if __name__ == "__main__":
     from cookiecutter_aws_agentcore_runtime_basic_demo.tests import run_cov_test
 
     run_cov_test(
         __file__,
-        "cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.runtime_dir",
+        "cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.codezip",
         preview=False,
     )

@@ -245,9 +245,9 @@ An agent is a prompt, a model, its own tools, and the MCP servers it uses. Follo
 The bridge from the code of OP-3 and OP-4 to AgentCore: one AgentCore CLI project for all runtimes, generated from the config and the package, built, and run locally by the CLI itself.
 
 - EP: `<package_name>/agentcore_project/gen.py` (via `.mise/tasks/ac-gen.py`)
-- FP: `<package_name>/agentcore_project/**`, the AgentCore paths of `<package_name>/paths.py`, `agentcore/cdk/**`, `[dependency-groups] agentcore` in `pyproject.toml`, `uv.lock`, `tests/agentcore_project/**`
-- CMD: `mise run ac-gen`, `ac-check-wheels` (new), `ac-build`, `ac-dev-<slug>`
-- Docs: `50-` to `53-` (to write), one per layer
+- FP: `<package_name>/agentcore_project/{registry,project_files,gen,codezip}.py`, the AgentCore paths of `<package_name>/paths.py`, `agentcore/cdk/**`, `[dependency-groups] agentcore` in `pyproject.toml`, `uv.lock`, `tests/agentcore_project/**`
+- CMD: `mise run ac-gen`, `ac-check-wheels`, `ac-build`, `ac-dev-<slug>`
+- Docs: `50-agentcore-project-layout.md`, `51-agentcore-config.md`, `52-agentcore-packaging.md`, `53-agentcore-dev.md`, one per layer
 
 ### OP-5-1 Layer 1: the files
 
@@ -264,20 +264,20 @@ The rule: AgentCore resources live in this project; anything else the runtimes u
 
 ### OP-5-2 Layer 2: the AgentCore config, from the project config
 
-- The **runtime registry** `get_runtime_specs()` in `agentcore_project/project_files.py` is the one place a runtime is declared: name, module, protocol (`MCP` or `HTTP`), and (new) its slug, local port, and sample call. Everything per runtime is derived from it: `agentcore.json`, `app/<Runtime>/`, the per-runtime tasks (OP-9-4).
-- `build_agentcore_json`: per runtime `CodeZip`, `main.py`, `app/<Runtime>`, Python version, protocol, the `envVars` of OP-1-2 and OP-2-3 (`IS_AGENTCORE_RUNTIME`, `ENV_NAME`, `CONFIG_SSM_PARAM_NAME`), `additionalPolicies` from the config.
+- The **runtime registry** `get_runtime_specs()` in `agentcore_project/registry.py` is the one place a runtime is declared: name, module, protocol (`RuntimeProtocolEnum.MCP` or `HTTP`). Everything per runtime is derived from it: `agentcore.json`, `app/<Runtime>/`; and, once tasks are generated per runtime (OP-9-4), its slug, local port, and sample call too.
+- `build_agentcore_json` (`agentcore_project/project_files.py`): per runtime `CodeZip`, `main.py`, `app/<Runtime>`, Python version, protocol, the `envVars` of OP-1-2 and OP-2-3 (`IS_AGENTCORE_RUNTIME`, `ENV_NAME`, `CONFIG_SSM_PARAM_NAME`), `additionalPolicies` from the config.
 - `build_aws_targets_json`: one target named after the environment, account and region from the config.
 - `build_empty_agentcore_json`: a project that declares nothing, for teardown (OP-7-1).
 - `write_json` writes only when the content changed.
 
 ### OP-5-3 Layer 3: package and build
 
-- `assemble_runtime_dir` writes into `app/<Runtime>/`, leaving the rest alone (the `.venv` of `agentcore dev`):
+- `assemble_runtime_dir` (`agentcore_project/codezip.py`) writes into `app/<Runtime>/`, leaving the rest alone (the `.venv` of `agentcore dev`):
   - `main.py`: a shim that imports `main` (and `app` for `HTTP`, because `agentcore dev` serves an HTTP runtime with `uvicorn main:app`).
   - `pyproject.toml`: the `agentcore` dependency group, every version pinned from `uv.lock` (`uv export`), because the CLI ignores `uv.lock`.
   - a copy of the modules and subpackages the runtimes need; never the dev tooling.
 - **The import rule**: copied code imports at module level only the standard library, the `agentcore` group, and other copied code; dev-only imports go inside the function that needs them. A test imports the assembled runtimes where the dev-only packages raise `ImportError`.
-- `ac-check-wheels` (new task; the script exists): installs each runtime's dependencies as the CLI does, wheels only, Linux aarch64, as a dry run, and keeps uv's own error.
+- `mise run ac-check-wheels` (`check_codezip_installs`): installs each runtime's dependencies as the CLI does, wheels only, Linux aarch64, as a dry run, and keeps uv's own error.
 - `mise run ac-build`: `agentcore build`, CodeZips and the synthesized stack, no AWS call.
 
 ### OP-5-4 Layer 4: run it with the AgentCore CLI locally
@@ -435,12 +435,12 @@ A change that breaks this design changes this file in the same change. A fact a 
 | R2 | done in OP-3 and OP-4: `FASTMCP_PORT` and `LOCAL_MCP_URL` in `runtimes/common.py`, `MCP_URL` and the `bind()` ARN variable (`get_runtime_arn_env_var`) in `runtimes/mcp_connection.py` | one documented constant each, in the module of the OP that owns it | OP-3-2, OP-4-2 |
 | R3 | done in OP-4: SigV4, ARN to URL, the lookup order in `runtimes/mcp_connection.py`; `strip_thinking`, `ProcessAgent`, the startup print in `runtimes/common.py` | the shared module of OP-4-2; tag stripping as layer 1 of OP-4-1 | OP-4 |
 | R4 | done in OP-4: the prompt and the own tools in `<domain>/<agent_name>.py`. Was: in the runtime module | layer 1, no `strands` import | OP-4-1 |
-| R5 | the registry has name, module, protocol only; ports in `mise.toml [env]`, sample calls in scripts and `curl` | slug, port, sample call in the registry | OP-5-2 |
+| R5 | the registry (`agentcore_project/registry.py` since OP-5) has name, module, protocol only; ports in `mise.toml [env]`, sample calls in the call tasks | slug, port, sample call in the registry, when the tasks are generated | OP-9-4 |
 | R6 | `ac-local-*`, `ac-dev-*`, the call tasks, `ac-invoke-dev-agent` are hand-written, with runtime names and module paths inline; `ac-dev-*` and `ac-invoke-dev-agent` still set `us-east-1` and the dev profile (`ac-local-agent` no longer does, OP-4) | generated per runtime (and environment), region and profile from the environment | OP-9-4 |
 | R7 | done for local calls: `devtools/mcp_client.py` (OP-3), `devtools/agent_client.py` (OP-4). Left: calling a deployed runtime (SigV4, `InvokeAgentRuntime`) | one tested client module; scripts are thin EPs | OP-8-1 |
 | R8 | done in OP-3: `local_port.py` and the MCP client are in `<package_name>/devtools/`, dev tooling never copied into a runtime | | OP-3-3 |
 | R9 | the AgentCore task generation is inside `cdk/mise_tasks.py` | its own module, called by `gen-env-tasks` | OP-6, OP-7 |
-| R10 | `ac-check-wheels` is run by path | a task | OP-5-3 |
+| R10 | done in OP-5: `mise run ac-check-wheels`; the loop moved into `codezip.check_codezip_installs` | | OP-5-3 |
 | R11 | nothing tests a deployed runtime; `ac-invoke-dev-agent` sends no session ID | `ac-invoke-<env>-<slug>` with `SESSION_ID`, `tests_int/test_agentcore_runtimes.py` | OP-6-4, OP-8 |
 | R12 | the references were by topic | rewritten one per OP, in OP order; the old ones wait in `legacy/` (see below) | OP-9-5 |
 
@@ -453,7 +453,7 @@ The references, one per OP, numbered `<OP><part>` so the file order is the OP or
 | `20-centralized-config.md` | OP-2 | done | `06` section 3, `05` sections 1 and 2 |
 | `30-mcp-runtime.md` | OP-3 | done | `09` (deleted), `10` sections 2 and 3 |
 | `40-agent-runtime.md` | OP-4 | done | `08` (deleted), `02` section 4.2 |
-| `50-` to `53-` | OP-5, one per layer | to write | `03`, `07`, `04`, `10` |
+| `50-` to `53-` | OP-5, one per layer | done | `03`, `04`, `06`, `10` (deleted), `07` sections 1, 2, 4, `05` section 4 |
 | `60-deploy.md` | OP-6 | to write | `07`, `11` sections 1 to 3 |
 | `70-teardown.md` | OP-7 | to write | `11` sections 5 and 6 |
 | `80-invoke-and-observe.md` | OP-8 | to write | `02`, `05` section 2, `11` sections 3 and 4 |

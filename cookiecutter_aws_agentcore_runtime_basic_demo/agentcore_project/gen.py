@@ -10,13 +10,13 @@ from __future__ import annotations
 from ..paths import path_enum
 from ..env import env
 from ..config.api import Config
-from .project_files import get_runtime_specs
+from .registry import get_runtime_specs
 from .project_files import build_agentcore_json
 from .project_files import build_empty_agentcore_json
 from .project_files import build_aws_targets_json
 from .project_files import write_json
-from .runtime_dir import export_requirements
-from .runtime_dir import assemble_runtime_dir
+from .codezip import export_requirements
+from .codezip import assemble_runtime_dir
 
 
 def generate_all(config: Config) -> None:

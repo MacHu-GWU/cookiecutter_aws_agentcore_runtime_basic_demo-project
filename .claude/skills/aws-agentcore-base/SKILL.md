@@ -22,6 +22,10 @@ One reference per OP, numbered `<OP><part>`: `10` is OP-1, `30` and `31` would b
 - **Centralized Config** (`references/20-centralized-config.md`): Read before adding or changing a config value or name a runtime uses, when a runtime cannot load its config, or before deploying or deleting the config of an environment.
 - **MCP Runtime** (`references/30-mcp-runtime.md`): Read before writing or changing an MCP tool, its business function or result model, or an MCP runtime module, or before running or calling an MCP server locally.
 - **Agent Runtime** (`references/40-agent-runtime.md`): Read before writing or changing an agent, its prompt, its own tools, its model, or how it reaches an MCP server, or before running or calling an agent locally.
+- **AgentCore Project Layout** (`references/50-agentcore-project-layout.md`): Read when looking for an AgentCore file, deciding whether a file under agentcore/ or app/ may be edited or committed, or before editing agentcore/cdk/.
+- **AgentCore Config, Generated** (`references/51-agentcore-config.md`): Read before adding or registering a runtime, adding a field to agentcore.json, or when the generated AgentCore files look wrong.
+- **Packaging a Runtime** (`references/52-agentcore-packaging.md`): Read before adding a dependency or a module a runtime imports, when a runtime fails to import, or when agentcore deploy fails with 'uv install failed for all platform candidates'.
+- **Running the Package with `agentcore dev`** (`references/53-agentcore-dev.md`): Read before running a runtime with agentcore dev, or when an agentcore dev server starts on the wrong port or cannot load its config.
 - **Operation-Oriented Design of an AgentCore Project** (`references/99-ood.md`): Read before refactoring an AgentCore module, before moving a file between OPs, or when deciding which OP a new piece of AgentCore work belongs to.
 
 <!-- END references index -->
@@ -36,7 +40,7 @@ The references are being rewritten one OP at a time, in OP order. Until an OP ha
 | OP-2 Centralized config | `20-centralized-config.md` | none |
 | OP-3 MCP runtime | `30-mcp-runtime.md` | none |
 | OP-4 Agent runtime | `40-agent-runtime.md` | none |
-| OP-5 AgentCore runtime | not yet | `legacy/03-project-layout.md`, `legacy/04-packaging.md`, `legacy/07-agentcore-vs-other-resources.md`, `legacy/10-local-dev.md`, `legacy/06-runtime-and-config.md` (section 2) |
+| OP-5 AgentCore runtime | `50-agentcore-project-layout.md`, `51-agentcore-config.md`, `52-agentcore-packaging.md`, `53-agentcore-dev.md` | none |
 | OP-6 Deploy | not yet | `legacy/07-agentcore-vs-other-resources.md`, `legacy/11-deploy-and-troubleshoot.md` |
 | OP-7 Teardown | not yet | `legacy/11-deploy-and-troubleshoot.md` (section 5) |
 | OP-8 Invoke and observe | not yet | `legacy/02-runtime-sessions-and-cold-starts.md`, `legacy/05-naming.md`, `legacy/11-deploy-and-troubleshoot.md` |
