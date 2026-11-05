@@ -32,6 +32,7 @@ from .one_02_boto_ses import OneBotoSesMixin
 from .one_03_cdk import OneCdkMixin
 from .one_04_devops import OneDevOpsMixin
 from .one_05_db import OneDbMixin
+from .one_06_config_deploy import OneConfigDeployMixin
 
 
 class One(
@@ -40,6 +41,7 @@ class One(
     OneCdkMixin,
     OneDevOpsMixin,
     OneDbMixin,
+    OneConfigDeployMixin,
 ):
     """
     Aggregates every project-level singleton. Use the module-level :data:`~cookiecutter_aws_agentcore_runtime_basic_demo.one.one_00_main.one`.

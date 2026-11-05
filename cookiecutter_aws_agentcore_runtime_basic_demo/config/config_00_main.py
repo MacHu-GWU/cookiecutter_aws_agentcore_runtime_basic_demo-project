@@ -3,8 +3,11 @@
 """
 The top-level configuration model.
 
-:class:`Config` holds every project-level setting the stacks and scripts need.
-Resource names are not written here but derived in ``config_01_name.py``.
+:class:`Config` holds every project-level setting the stacks, the scripts, and
+the AgentCore runtimes need. It is the one source of truth: every AgentCore
+setting (``agentcore/agentcore.json``, ``agentcore/aws-targets.json``, the
+runtimes' ``envVars``) is generated from it, never written by hand. Resource
+names are not written here but derived in ``config_01_name.py``.
 
 To add a group of related settings, put them in a new numbered module
 (``config_01_xxx.py``, ``config_02_xxx.py``, ...) as a mixin or a nested model,

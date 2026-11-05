@@ -5,7 +5,7 @@ description: "Add a new MCP server runtime to this AgentCore project: its name i
 
 Add one MCP server runtime to the project, end to end, following the patterns of `PowerPlantMcp`.
 
-Read ../aws-agentcore-base/SKILL.md, then ../aws-agentcore-base/references/10-code-runtime.md (OP-1), then the legacy references below. The base references are being rewritten one OP at a time: until then, a short citation such as `05` or `10` in this file means the legacy file of that number, `references/legacy/NN-*.md`, not the new reference with the same number.
+Read ../aws-agentcore-base/SKILL.md, then ../aws-agentcore-base/references/10-code-runtime.md (OP-1) and ../aws-agentcore-base/references/20-centralized-config.md (OP-2), then the legacy references below. The base references are being rewritten one OP at a time: until then, a short citation such as `05` or `10` in this file means the legacy file of that number, `references/legacy/NN-*.md`, not the new reference with the same number.
 - ../aws-agentcore-base/references/legacy/03-project-layout.md
 - ../aws-agentcore-base/references/legacy/04-packaging.md
 - ../aws-agentcore-base/references/legacy/05-naming.md

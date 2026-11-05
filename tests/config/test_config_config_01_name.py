@@ -6,6 +6,7 @@ from cookiecutter_aws_agentcore_runtime_basic_demo.config.config_01_name import 
 
 import pytest
 
+from cookiecutter_aws_agentcore_runtime_basic_demo.env import EnvNameEnum
 from cookiecutter_aws_agentcore_runtime_basic_demo.config.api import Config
 
 
@@ -64,6 +65,20 @@ def test_names(config: Config):
 def test_agentcore_runtime_physical_name_too_long(config: Config):
     with pytest.raises(ValueError, match="longer than 48 characters"):
         config.get_agentcore_runtime_physical_name("X" * 40)
+
+
+@pytest.mark.parametrize("env_name", [env_name.value for env_name in EnvNameEnum])
+def test_agentcore_runtime_physical_names_fit(env_name: str):
+    """
+    With the committed config files, every runtime's physical name fits the
+    48 characters AgentCore allows, in every environment.
+    """
+    config = Config.load_from_local_config_file(env_name=env_name)
+    prefix = "agentcore_runtime_physical_name_"
+    names = [name for name in dir(type(config)) if name.startswith(prefix)]
+    assert names
+    for name in names:
+        assert len(getattr(config, name)) <= 48
 
 
 if __name__ == "__main__":

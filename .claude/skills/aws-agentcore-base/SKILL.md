@@ -19,6 +19,7 @@ One reference per OP, numbered `<OP><part>`: `10` is OP-1, `30` and `31` would b
 
 - **AgentCore Docs Through MCP** (`references/00-agentcore-docs-mcp.md`): Read before answering any AgentCore question or relying on an AgentCore behavior, or when the AgentCore doc tools are missing.
 - **Code Runtime** (`references/10-code-runtime.md`): Read before writing code that behaves differently by where it runs, when a runtime is detected wrongly, or before adding a runtime kind.
+- **Centralized Config** (`references/20-centralized-config.md`): Read before adding or changing a config value or name a runtime uses, when a runtime cannot load its config, or before deploying or deleting the config of an environment.
 - **Operation-Oriented Design of an AgentCore Project** (`references/99-ood.md`): Read before refactoring an AgentCore module, before moving a file between OPs, or when deciding which OP a new piece of AgentCore work belongs to.
 
 <!-- END references index -->
@@ -30,10 +31,10 @@ The references are being rewritten one OP at a time, in OP order. Until an OP ha
 | OP | New reference | Until then, legacy |
 | :--- | :--- | :--- |
 | OP-1 Code runtime | `10-code-runtime.md` | none |
-| OP-2 Centralized config | not yet | `legacy/06-runtime-and-config.md` (sections 2 to 5), `legacy/05-naming.md` |
-| OP-3 MCP runtime | not yet | `legacy/09-mcp-tools.md`, `legacy/10-local-dev.md` |
-| OP-4 Agent runtime | not yet | `legacy/08-agent-to-mcp.md`, `legacy/10-local-dev.md` |
-| OP-5 AgentCore runtime | not yet | `legacy/03-project-layout.md`, `legacy/04-packaging.md`, `legacy/07-agentcore-vs-other-resources.md`, `legacy/10-local-dev.md` |
+| OP-2 Centralized config | `20-centralized-config.md` | none |
+| OP-3 MCP runtime | not yet | `legacy/09-mcp-tools.md`, `legacy/10-local-dev.md`, `legacy/06-runtime-and-config.md` (section 5), `legacy/05-naming.md` (section 4) |
+| OP-4 Agent runtime | not yet | `legacy/08-agent-to-mcp.md`, `legacy/10-local-dev.md`, `legacy/06-runtime-and-config.md` (sections 4 and 5), `legacy/05-naming.md` (sections 3 and 4) |
+| OP-5 AgentCore runtime | not yet | `legacy/03-project-layout.md`, `legacy/04-packaging.md`, `legacy/07-agentcore-vs-other-resources.md`, `legacy/10-local-dev.md`, `legacy/06-runtime-and-config.md` (section 2) |
 | OP-6 Deploy | not yet | `legacy/07-agentcore-vs-other-resources.md`, `legacy/11-deploy-and-troubleshoot.md` |
 | OP-7 Teardown | not yet | `legacy/11-deploy-and-troubleshoot.md` (section 5) |
 | OP-8 Invoke and observe | not yet | `legacy/02-runtime-sessions-and-cold-starts.md`, `legacy/05-naming.md`, `legacy/11-deploy-and-troubleshoot.md` |

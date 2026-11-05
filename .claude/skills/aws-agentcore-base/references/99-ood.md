@@ -134,10 +134,10 @@ The order of the check: `IS_AGENTCORE_RUNTIME` first (then `LOCAL_DEV` splits it
 
 AgentCore has its own configuration (`agentcore.json`, `aws-targets.json`, per-runtime `envVars`), and the project has more than AgentCore in it. So the **project's config is the source of truth**, and code generates every AgentCore setting from it. Nothing AgentCore reads is edited by hand.
 
-- EP: `<package_name>/config/config_00_main.py` (the model), `<package_name>/agentcore_project/gen.py` (what is derived)
-- FP: `config/*.json5`, `config/example/`, `<package_name>/config/**` (the AgentCore fields and names), `tests/config/**`, `tests/conftest.py`
+- EP: `<package_name>/config/config_00_main.py` (the model and its loaders)
+- FP: `config/*.json5`, `config/example/`, `<package_name>/config/**` (the AgentCore fields and names), `<package_name>/one/one_01_config.py`, `<package_name>/one/one_06_config_deploy.py` (writes the SSM copy), `.mise/tasks/config-{deploy,delete}.py`, `tests/config/**`, `tests/one/test_one_one_0{1,6}_*.py`, `tests/conftest.py`
 - CMD: `mise run cov`; `mise run ac-gen` (derive for `ENV_NAME`); `mise run config-deploy-<env>` (asks first)
-- Docs: `20-centralized-config.md` (to write); the mechanics are in `pywf-aws-cdk-base`
+- Docs: `20-centralized-config.md`; the mechanics are in `pywf-aws-cdk-base`
 
 ### OP-2-1 One source, several derived copies
 
@@ -303,7 +303,7 @@ Different from OP-3-3 and OP-4-3: this runs the **packaged** copy, as close to d
 Put an environment's AgentCore part into AWS, in dependency order, then prove it works there. **Every step asks first.**
 
 - EP: the AgentCore task generator (new: `<package_name>/agentcore_project/mise_tasks.py`, split from `cdk/mise_tasks.py`), which renders the deploy tasks
-- FP: `<package_name>/cdk/stacks/agentcore_deps_stack.py`, `<package_name>/one/one_04_devops.py`, `.mise/tasks/{config-deploy,ac-check-deps,ac-gen,ac-check-wheels}.py`, the `<env-tasks>` block of `mise.toml`, `tests_int/**`
+- FP: `<package_name>/cdk/stacks/agentcore_deps_stack.py`, `<package_name>/one/one_04_devops.py` (the check before deploy), `.mise/tasks/{ac-check-deps,ac-gen,ac-check-wheels}.py`; the config step is OP-2's, the `<env-tasks>` block of `mise.toml`, `tests_int/**`
 - CMD: `mise run ac-chain-up-<env>`, or a single step; free: `mise run -n <task>`, `cdk-plan-<env>-agentcore-deps-stack`
 - Docs: `60-deploy.md` (to write)
 
@@ -456,7 +456,7 @@ The references, one per OP, numbered `<OP><part>` so the file order is the OP or
 | :--- | :--- | :--- | :--- |
 | `00-agentcore-docs-mcp.md` | every OP (a habit) | done | `01` |
 | `10-code-runtime.md` | OP-1 | done | `06` section 1 |
-| `20-centralized-config.md` | OP-2 | to write | `06` sections 2 to 5, `05` |
+| `20-centralized-config.md` | OP-2 | done | `06` section 3, `05` sections 1 and 2 |
 | `30-mcp-runtime.md` | OP-3 | to write | `09`, `10` |
 | `40-agent-runtime.md` | OP-4 | to write | `08`, `02` section 4.2, `10` |
 | `50-` to `53-` | OP-5, one per layer | to write | `03`, `07`, `04`, `10` |
