@@ -35,4 +35,4 @@ Welcome to ``cookiecutter_aws_agentcore_runtime_basic_demo`` Documentation
 .. image:: https://cookiecutter-aws-agentcore-runtime-basic-demo.readthedocs.io/en/latest/_static/cookiecutter_aws_agentcore_runtime_basic_demo-logo.png
     :target: https://cookiecutter-aws-agentcore-runtime-basic-demo.readthedocs.io/en/latest/
 
-A seed project for a multi-environment AWS CDK code base (``dev``, ``tst``, ``prd``), with two sample stacks. How it is organized and how to work with it: the ``pywf-aws-cdk-base`` skill in ``.claude/skills/``.
+A seed project for a multi-environment AWS Bedrock AgentCore Runtime code base (``dev``, ``tst``, ``prd``), with two sample runtimes that work together: ``PowerPlantMcp``, an MCP server, and ``SiteAgent``, an agent that calls it. The AgentCore CLI deploys the runtimes from ``agentcore/``; what they depend on, and every other AWS resource, is a Python CDK stack. How it is organized and how to work with it: the ``aws-agentcore-base`` skill (runtimes) and the ``pywf-aws-cdk-base`` skill (config, credentials, stacks) in ``.claude/skills/``.
