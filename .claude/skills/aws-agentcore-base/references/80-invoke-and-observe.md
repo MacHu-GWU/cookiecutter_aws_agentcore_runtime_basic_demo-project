@@ -93,7 +93,7 @@ This template is C, as long as the caller reuses its session ID. To make the fir
 | :--- | :--- |
 | A runtime's log group | `/aws/bedrock-agentcore/runtimes/<runtime ID>-DEFAULT` (`get_runtime_log_group(arn)`); the runtime ID is the last part of the ARN |
 | A session | its own log stream in that group |
-| A healthy start | the line `main()` prints: `Loaded the config of '<env>' on runtime 'agentcore'` (and the database line of an MCP runtime) |
+| A healthy start | the line `main()` prints: `Loaded the config of '<env>' on runtime 'agentcore'`, plus what that `main()` prints about its own dependencies |
 | A failed call | the traceback, in the stream of that session |
 
 ```bash
@@ -137,10 +137,12 @@ mise run int-test
 ENV_NAME=tst mise run int-test
 ```
 
-- The MCP runtime, found by its physical name, lists its tools and answers a `get_site` call, over SigV4.
-- The agent runtime answers two messages in one new session, and both run in that session.
+One test per runtime of the registry, from its `sample_payload`, so a new runtime is covered without a new test:
 
-They need the environment deployed, and the agent test calls the model: ask before relying on them.
+- **An MCP runtime**, found by its physical name: lists its tools over SigV4, and answers its sample `tools/call`; a tool error fails the test.
+- **An agent runtime**: answers its sample prompt and then a follow-up in one new session, and both run in that session.
+
+They need the environment deployed, and the agent tests call the models: ask before relying on them. A runtime whose sample payload does not suit a deployed environment (it writes data, say) gets its own check here instead.
 
 ---
 

@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
 """
-The deployed AgentCore runtimes of the current environment answer, called the
-way a client program calls them: the MCP runtime over SigV4, the agent runtime
-through ``InvokeAgentRuntime``, twice in one runtime session. It calls the
-agent's model.
+Every deployed AgentCore runtime of the current environment answers, called the
+way a client program calls it: each MCP runtime over SigV4, each agent runtime
+through ``InvokeAgentRuntime``, twice in one runtime session. The runtimes and
+what to send them come from the runtime registry (``sample_payload``), so a new
+runtime is tested here without a new test. It calls the agents' models.
 """
 
 from cookiecutter_aws_agentcore_runtime_basic_demo.devtools.agentcore_client import (
@@ -17,6 +18,8 @@ from cookiecutter_aws_agentcore_runtime_basic_demo.devtools.agentcore_client imp
     invoke_agent_runtime,
 )
 
+import pytest
+
 from cookiecutter_aws_agentcore_runtime_basic_demo.one.api import one
 from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.mcp_connection import (
     get_deployed_mcp_connection,
@@ -27,51 +30,71 @@ from cookiecutter_aws_agentcore_runtime_basic_demo.devtools.mcp_client import (
 from cookiecutter_aws_agentcore_runtime_basic_demo.devtools.mcp_client import (
     call_tool,
 )
+from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.registry import (
+    RuntimeSpec,
+)
+from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.registry import (
+    RuntimeProtocolEnum,
+)
+from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.registry import (
+    get_runtime_specs,
+)
+
+SPECS = get_runtime_specs(one.config)
+MCP_SPECS = [spec for spec in SPECS if spec.protocol == RuntimeProtocolEnum.MCP]
+AGENT_SPECS = [spec for spec in SPECS if spec.protocol == RuntimeProtocolEnum.HTTP]
+
+#: The second message of an agent's session: it only makes sense with the first.
+FOLLOW_UP_PROMPT = "Repeat the main point of your previous answer in one sentence."
 
 
-def test_mcp_runtime():
-    """The MCP runtime lists its tools and answers a call, over SigV4."""
-    config = one.config
-    runtime_arn = find_runtime_arn(
-        one.bedrock_agentcore_control_client,
-        config.agentcore_runtime_physical_name_power_plant_mcp,
-    )
-    url, auth = get_deployed_mcp_connection(runtime_arn, one.boto_ses)
-    assert "get_site" in list_tools(url, auth=auth)
-    site = call_tool(url, "get_site", {"site_id": "S-03"}, auth=auth)
-    assert site["id"] == "S-03"
-
-
-def test_agent_runtime():
+def find_arn(spec: RuntimeSpec) -> str:
     """
-    The agent answers, and a second message of the same session continues the
-    conversation in the same runtime session.
+    The ARN of the deployed runtime of ``spec`` in the current environment.
     """
-    config = one.config
-    runtime_arn = find_runtime_arn(
+    return find_runtime_arn(
         one.bedrock_agentcore_control_client,
-        config.agentcore_runtime_physical_name_site_agent,
+        one.config.get_agentcore_runtime_physical_name(spec.name),
     )
+
+
+@pytest.mark.parametrize("spec", MCP_SPECS, ids=lambda spec: spec.name)
+def test_mcp_runtime(spec: RuntimeSpec):
+    """
+    The MCP runtime lists its tools and answers its sample call, over SigV4;
+    a tool error fails the test.
+    """
+    url, auth = get_deployed_mcp_connection(find_arn(spec), one.boto_ses)
+    tool_names = list_tools(url, auth=auth)
+    print(tool_names)
+    assert tool_names
+    payload = spec.sample_payload
+    if payload["method"] == "tools/call":
+        params = payload["params"]
+        assert params["name"] in tool_names
+        result = call_tool(url, params["name"], params.get("arguments"), auth=auth)
+        print(result)
+
+
+@pytest.mark.parametrize("spec", AGENT_SPECS, ids=lambda spec: spec.name)
+def test_agent_runtime(spec: RuntimeSpec):
+    """
+    The agent answers its sample prompt, and a follow-up in the same session
+    runs in that same runtime session.
+    """
+    runtime_arn = find_arn(spec)
     session_id = new_session_id("int-test")
     client = one.bedrock_agentcore_client
-    answer, returned_id = invoke_agent_runtime(
-        client,
-        runtime_arn,
-        {"prompt": "Who is assigned to site S-03? Answer with the names only."},
-        session_id=session_id,
-    )
-    print(answer)
-    assert returned_id == session_id
-    assert answer["result"]
-    answer, returned_id = invoke_agent_runtime(
-        client,
-        runtime_arn,
-        {"prompt": "Which of them is also assigned to site S-04?"},
-        session_id=session_id,
-    )
-    print(answer)
-    assert returned_id == session_id
-    assert answer["result"]
+    for payload in [spec.sample_payload, {"prompt": FOLLOW_UP_PROMPT}]:
+        answer, returned_id = invoke_agent_runtime(
+            client,
+            runtime_arn,
+            payload,
+            session_id=session_id,
+        )
+        print(answer)
+        assert returned_id == session_id
+        assert answer["result"]
 
 
 if __name__ == "__main__":

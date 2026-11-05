@@ -3,7 +3,7 @@ name: aws-agentcore-new-agent
 description: "Add a new agent runtime (protocol HTTP, Strands on BedrockAgentCoreApp) to this AgentCore project: its names and model in the config, its prompt and own tools in plain Python, the thin runtime module with one agent per process and its MCP connections (bind, SigV4), its registry entry (local port, sample prompt, MCP runtimes), its permissions, and the tests, then run and call it locally, package it, and deploy it with the user's yes. Use when the user wants a new agent on AgentCore Runtime, or an agent that uses one or more of the project's MCP runtimes."
 ---
 
-Add one agent runtime, end to end, the way the existing agent runtime is built (the registry entry with protocol `HTTP` in `agentcore_project/registry.py`).
+Add one agent runtime, end to end, the way the existing agent runtime is built (the registry entry with protocol `HTTP` in `agentcore_project/registry.py`); if the project has none, the references below are the whole pattern.
 
 Read ../aws-agentcore-base/SKILL.md, then:
 - ../aws-agentcore-base/references/10-code-runtime.md

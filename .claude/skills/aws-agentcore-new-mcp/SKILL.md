@@ -3,7 +3,7 @@ name: aws-agentcore-new-mcp
 description: "Add a new MCP server runtime to this AgentCore project: its names in the config, its tool functions with Pydantic results, the thin FastMCP runtime module, its registry entry (local port, sample call), its permissions in the agentcore_deps stack, and the tests, then run and call it locally, package it, and deploy it with the user's yes. Use when the user wants a new MCP server, a new set of tools served on AgentCore Runtime, or to split tools out of an existing MCP runtime."
 ---
 
-Add one MCP server runtime, end to end, the way the existing MCP runtime is built (the registry entry with protocol `MCP` in `agentcore_project/registry.py`).
+Add one MCP server runtime, end to end, the way the existing MCP runtime is built (the registry entry with protocol `MCP` in `agentcore_project/registry.py`); if the project has none, the references below are the whole pattern.
 
 Read ../aws-agentcore-base/SKILL.md, then:
 - ../aws-agentcore-base/references/10-code-runtime.md
