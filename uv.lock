@@ -702,7 +702,7 @@ wheels = [
 
 [[package]]
 name = "cookiecutter-aws-agentcore-runtime-basic-demo"
-version = "0.1.1"
+version = "1.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "aws-cdk-lib" },
