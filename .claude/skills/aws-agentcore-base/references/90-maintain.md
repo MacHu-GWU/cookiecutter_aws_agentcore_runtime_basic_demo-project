@@ -95,7 +95,7 @@ After any of these and a deploy, `mise run gen-quick-links` refreshes `QUICK_LIN
 - `99-ood.md` is the design: every OP with its EP, FP, and CMD. A change that breaks it changes it in the same change, a little.
 - One reference per OP, numbered `<OP><part>`; each opens with "Implements OP-N", its EP, FP, and CMD, and cites only lower numbers. Write a fact where its OP is, and nowhere else.
 - A fact that turns out wrong is fixed in its reference in the same change as the code; an undocumented behavior goes into section 2.
-- The invokers (`aws-agentcore-new-mcp`, `aws-agentcore-new-agent`) list the references they read; keep those lists and the base `SKILL.md` in step.
+- The invokers (`aws-agentcore-<job>`, listed in the base `SKILL.md`) list the references they read; keep those lists, the base `SKILL.md`, and the invoker table of `99-ood.md` in step.
 - After changing a reference's description, regenerate the index of `SKILL.md`:
 
 ```bash

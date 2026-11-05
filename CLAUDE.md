@@ -65,6 +65,10 @@ This repo follows the pywf open-source Python library template. **Before creatin
 | An AgentCore question, or AgentCore work no invoker covers | `aws-agentcore-base` |
 | Add an MCP server runtime | `aws-agentcore-new-mcp` |
 | Add an agent runtime | `aws-agentcore-new-agent` |
+| Change an MCP runtime (its tools, data, dependencies, permissions) | `aws-agentcore-change-mcp` |
+| Change an agent (prompt, tools, model, MCP runtimes, contract) | `aws-agentcore-change-agent` |
+| Deploy a change to an environment and test it there | `aws-agentcore-deploy` |
+| Find why a runtime fails, is slow, or answers wrongly | `aws-agentcore-debug` |
 | Not sure which | `pywf-oss-base` |
 
 <!-- END pywf-oss template block -->

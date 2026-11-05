@@ -23,7 +23,7 @@ Ask, then propose, and wait for the user's yes before writing files:
 
 - **What questions the tools answer**, one tool per question, and what each returns.
 - **Where the data comes from**: an existing dependency of `one` (such as a database engine), a new one (a config field, its resources), an AWS service, or an HTTP API.
-- **Which agent calls it**, if any.
+- **Which agent calls it**, if any: offer the agents of the registry (`get_runtime_specs(config)`, protocol `HTTP`) as the choices, or none.
 
 Then propose, in one message:
 
@@ -46,7 +46,7 @@ Then propose, in one message:
 5. **Runtime module** (`30`, section 3): `new_mcp_server("<Runtime>")`, one thin tool per function with `doc_from` and the dependency from `one`, `main()` with `print_config_source` then `run_mcp_server`. Test it like the existing MCP runtime's test: the server name, the tool list, descriptions = docstrings, no dependency in the input schema, an output schema, a call per tool, `main()`.
 6. **Register it** (`51`, section 7): a `RuntimeSpec(name=..., module="runtimes.<snake_name>_mcp", protocol=RuntimeProtocolEnum.MCP, sample_payload=<a JSON-RPC tools/call request>, local_port=<next free>)` in `get_runtime_specs(config)`; update `test_get_runtime_specs`. Then `mise run gen-env-tasks`: its local, dev, call, invoke, and logs tasks appear.
 7. **Permissions and resources** (`60`, section 1): statements in the `agentcore_deps` policy, new resources as new `s0N_` methods of that stack, names in the config; assert them in the stack's test.
-8. **An agent that calls it** (`40`, sections 4 and 6): the MCP runtime in the agent's `mcp_runtimes`, a `bind()` line in `cdk-stack.ts`, one more `get_mcp_connection("<Runtime>", ...)` in the agent; or the `aws-agentcore-new-agent` skill for a new agent.
+8. **An agent that calls it**: connecting an existing agent to it is the `aws-agentcore-change-agent` skill (its `mcp_runtimes`, a `bind()` line, a `get_mcp_connection`); a new agent is the `aws-agentcore-new-agent` skill.
 
 ## 3. Verify
 
@@ -62,7 +62,7 @@ mise run build-doc
 
 Then `mise run ac-local-<slug>` and `mise run ac-local-<slug>-call`. `ac-dev-<slug>` also needs the config deployed (`config-deploy-<env>`), which changes AWS: ask first.
 
-Deploying is a separate step with the user's yes (`60`): `mise run ac-chain-up-<env>`, or only the steps that changed (`cdk-up-<env>-agentcore-deps-stack`, then `ac-deploy-<env>`); then `mise run ac-test-<env>`.
+Deploying is a separate step with the user's yes: the `aws-agentcore-deploy` skill. Changing the runtime after this is the `aws-agentcore-change-mcp` skill.
 
 ## 4. Report
 

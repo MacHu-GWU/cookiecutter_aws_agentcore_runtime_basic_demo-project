@@ -42,7 +42,13 @@ One reference per OP, numbered `<OP><part>`: `10` is OP-1, `30` and `31` would b
 
 Each loads this skill, then reads the references listed. Keep both lists in step when either changes.
 
-| Invoker | Job | Reads |
-| :--- | :--- | :--- |
-| `aws-agentcore-new-mcp` | add an MCP server runtime | `10`, `20`, `30`, `50` to `53`, `60`; `40` if an agent calls it; `80` when it is slow or fails |
-| `aws-agentcore-new-agent` | add an agent runtime | `10`, `20`, `30`, `40`, `50` to `53`, `60`; `80` when latency matters or it fails |
+Each invoker that works on something that already exists first pins down its target (a runtime from the registry, an environment from `EnvNameEnum`) from the user's words, and asks when it cannot; the mise tasks stay the deterministic way to run one step.
+
+| Invoker | Job | Target | Reads |
+| :--- | :--- | :--- | :--- |
+| `aws-agentcore-new-mcp` | add an MCP server runtime | (new); the agent that calls it | `10`, `20`, `30`, `50` to `53`, `60`; `40` if an agent calls it; `80` when it is slow or fails |
+| `aws-agentcore-new-agent` | add an agent runtime | (new); the MCP runtimes it uses | `10`, `20`, `30`, `40`, `50` to `53`, `60`; `80` when latency matters or it fails |
+| `aws-agentcore-change-mcp` | change an MCP runtime: its tools, data source, dependencies, permissions | an MCP runtime | `20`, `30`, `51`, `52`; `40` if an agent calls it; `60` for a permission |
+| `aws-agentcore-change-agent` | change an agent: prompt, tools, model, MCP runtimes, contract | an agent runtime | `20`, `40`, `51`; `30`, `50`, `52`, `60`, `80` by what changes |
+| `aws-agentcore-deploy` | deploy a change to an environment and test it there | an environment | `60`; `20`, `80` by what changed; `70` only to remove something |
+| `aws-agentcore-debug` | find why a runtime fails, is slow, or answers wrongly | where, which runtime, the symptom | `80`; `30` / `40`, `53`, `60` by where; `10`, `20`, `52`, `90` by symptom |

@@ -23,7 +23,7 @@ Read ../aws-agentcore-base/references/80-invoke-and-observe.md when latency matt
 Ask, then propose, and wait for the user's yes before writing files:
 
 - **What the agent is for**, in one sentence; that becomes its system prompt.
-- **Its tools**: which of the project's MCP runtimes it uses, and which tools of its own (plain functions, listed in `TOOLS` of its layer 1 module).
+- **Its tools**: which of the project's MCP runtimes it uses, and which tools of its own (plain functions, listed in `TOOLS` of its layer 1 module). Offer the MCP runtimes of the registry (`get_runtime_specs(config)`, protocol `MCP`) as the choices; never assume one. A name that is not there is a new MCP runtime: `aws-agentcore-new-mcp` first.
 - **The model**: a Bedrock model or cross-region inference profile the account can call. Check it before relying on it (`80`, section 6: an agreement can be `NOT_AVAILABLE` in an account although the console lists the model).
 - **The request and response**: the payload fields a caller sends and what the agent returns; they become `<Agent>Request` and `<Agent>Response` (`40`, section 2).
 
@@ -63,7 +63,7 @@ mise run build-doc
 
 Then start its MCP runtimes and the agent with their `ac-local-<slug>` tasks, and `mise run ac-local-<slug>-call`. That calls the Bedrock model with the environment's profile: say so before running it. `ac-dev-<slug>` also needs the config deployed (`config-deploy-<env>`), which changes AWS: ask first.
 
-Deploying is a separate step with the user's yes (`60`): `mise run ac-chain-up-<env>`, or only `ac-deploy-<env>` when only code changed; then `mise run ac-test-<env>`.
+Deploying is a separate step with the user's yes: the `aws-agentcore-deploy` skill. Changing the agent after this is the `aws-agentcore-change-agent` skill.
 
 ## 4. Report
 

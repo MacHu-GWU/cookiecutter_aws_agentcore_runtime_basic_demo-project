@@ -57,12 +57,16 @@ The document is a template: it names no business domain of a particular project.
 
 The OP order is also the refactor order: each OP builds only on the ones before it.
 
-The two invokers are walks through these OPs:
+The invokers are walks through these OPs, each for one intent of the user; the mise tasks run the single steps:
 
 | Invoker | Walk |
 | :--- | :--- |
 | `aws-agentcore-new-mcp` | OP-2-2 → OP-3 → OP-5-2 (registry) → OP-5-4 → OP-6 (asks first) |
 | `aws-agentcore-new-agent` | OP-2-2 → OP-4 → OP-5-1 (`bind`) → OP-5-2 → OP-5-4 → OP-6 (asks first) |
+| `aws-agentcore-change-mcp` | OP-3 (+ OP-2-2, OP-5-3, OP-6-1 as needed) → OP-5-2 → the agents that call it |
+| `aws-agentcore-change-agent` | OP-4 (+ OP-2-2, OP-5-1 `bind`, OP-6-1 as needed) → OP-5-2 |
+| `aws-agentcore-deploy` | OP-6-2 (the steps the change needs, asks first) → OP-6-4 → OP-8 (quick links) |
+| `aws-agentcore-debug` | OP-8-3 → back to the OP the cause is in, then hands the fix to its invoker |
 
 ---
 
