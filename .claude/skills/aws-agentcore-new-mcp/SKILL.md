@@ -15,8 +15,9 @@ Read ../aws-agentcore-base/SKILL.md, then:
 - ../aws-agentcore-base/references/52-agentcore-packaging.md
 - ../aws-agentcore-base/references/53-agentcore-dev.md
 - ../aws-agentcore-base/references/60-deploy.md
+- ../aws-agentcore-base/references/70-teardown.md (to remove a runtime or an environment)
 
-A short citation such as `30` means the reference of that number; a citation of `11` means the legacy file `references/legacy/11-deploy-and-troubleshoot.md`, until OP-7 and OP-8 are rewritten.
+A short citation such as `30` means the reference of that number; a citation of `11` means the legacy file `references/legacy/11-deploy-and-troubleshoot.md`, until OP-8 is rewritten.
 
 For new modules and tests, follow the `pywf-oss-add-module` and `pywf-oss-write-test` skills.
 

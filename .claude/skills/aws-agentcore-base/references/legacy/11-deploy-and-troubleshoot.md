@@ -65,29 +65,3 @@ It does not deploy the config itself: that is step 1 of the chain.
 | `CDK dependencies are missing` | `agentcore/cdk/node_modules` absent (fresh clone) | `npm install` in `agentcore/cdk` |
 | a deploy does not change a running session | a microVM keeps the code it started with | a new session gets the new code (`02`) |
 | `Unknown runtime "<Name>" in project` at synth | a `runtime('<Name>')` in `cdk-stack.ts` that `agentcore.json` does not declare | run `ac-gen`; keep `bind()` inside `if (this.application.runtimes.size > 0)` |
-
----
-
-## 5. The teardown chain
-
-The deploy chain in reverse; `ac-chain-down-<env>` runs all three after one yes/no question, and its steps then do not ask again. `ac-down-<env>` and `config-delete-<env>` ask on their own when run alone. Only `y` or `yes` (any case) goes on; a bare Enter, anything else, or no terminal stops. `CONFIRM_YES=true` answers yes without asking, such as in CI. The question comes from `<pkg>/confirm.py`, never from mise's `confirm`, which takes a bare Enter as yes (that destroyed dev once).
-
-| # | Step task | Does |
-| :--- | :--- | :--- |
-| 1 | `ac-down-<env>` | the AgentCore stack: every runtime of `<env>` |
-| 2 | `cdk-down-<env>-agentcore-deps-stack` | the `agentcore_deps` stack, once no role uses its policy |
-| 3 | `config-delete-<env>` | the config parameter |
-
-```bash
-mise run ac-chain-down-<env>
-```
-
-`ac-down-<env>` is the CLI's own teardown: `agentcore deploy --yes` of a project that declares nothing destroys the target's stack and removes the target from `agentcore/.cli/deployed-state.json`. Here `agentcore.json` is generated, so instead of `agentcore remove all` the task writes an empty one (`.mise/tasks/ac-gen-teardown.py`), deploys it, then runs `ac-gen` to put the real project back. If the deploy fails, the empty `agentcore.json` stays until the next `ac-*` task regenerates it. `cdk-stack.ts` skips `bind()` when there is no runtime, so the empty project still synthesizes.
-
-Commit the changed `deployed-state.json` afterwards.
-
----
-
-## 6. `deployed-state.json` stays in git
-
-`agentcore/.cli/deployed-state.json` records each deployed target's stack (and credential provider ARNs, none here). The `.gitignore` of a fresh `agentcore create` commits it on purpose, so everyone who deploys shares it; keep it committed, and commit it after every deploy or teardown that changes it. With several deployers, give each environment one deployer (in the end, CI), so two people never write it for the same target at once.

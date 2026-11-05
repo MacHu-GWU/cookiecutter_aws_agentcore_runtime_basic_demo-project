@@ -94,6 +94,7 @@ def test_deploy_and_test_tasks():
     """
     tasks = load_tasks()
     assert "deployed-state.json" in tasks["ac-deploy-dev"]["run"]
+    assert "deployed-state.json" in tasks["ac-down-dev"]["run"]
     assert "agentcore status --target dev" in tasks["ac-status-dev"]["run"]
     test = tasks["ac-test-dev"]
     assert [item["task"] for item in test["run"] if isinstance(item, dict)] == [
@@ -110,6 +111,20 @@ def test_deploy_and_test_tasks():
         "AWS_PROFILE={{env.AWS_PROFILE_FOR_PRD}}"
         in tasks["ac-invoke-prd-site-agent"]["run"]
     )
+
+
+def test_ac_down_restores_the_project():
+    """
+    ac-down deploys an empty project, and puts the real one back when the task
+    ends, failed or not: the trap is set after the empty project is written and
+    before the deploy, which is the last command that can fail.
+    """
+    lines = load_tasks()["ac-down-dev"]["run"].strip().splitlines()
+    teardown = lines.index(".venv/bin/python .mise/tasks/ac-gen-teardown.py")
+    trap = lines.index("trap '.venv/bin/python .mise/tasks/ac-gen.py' EXIT")
+    deploy = next(i for i, line in enumerate(lines) if line.startswith("AWS_PROFILE="))
+    assert teardown < trap < deploy
+    assert lines[deploy].endswith("agentcore deploy --target dev --yes")
 
 
 def test_get_invoke_script():

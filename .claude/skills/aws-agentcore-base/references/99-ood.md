@@ -337,14 +337,14 @@ The `agentcore_deps` CDK stack: the managed policy attached to every execution r
 
 Take an environment's AgentCore part out of AWS: the deploy chain in reverse. **Asks first**, with `<package_name>/confirm.py`: only `y` / `yes` goes on; a bare Enter, anything else, or no terminal stops; `CONFIRM_YES=true` answers yes (CI). Never mise's `confirm`, which takes a bare Enter as yes.
 
-- EP: the AgentCore task generator (as OP-6)
-- FP: `<package_name>/confirm.py`, `<package_name>/agentcore_project/gen.py` (`generate_teardown`), `.mise/tasks/{confirm,ac-gen-teardown,config-delete}.py`, `tests/test_confirm.py`
-- CMD: `mise run ac-chain-down-<env>`, or a single step
-- Docs: `70-teardown.md` (to write)
+- EP: `mise run ac-chain-down-<env>`, rendered by `<package_name>/agentcore_project/mise_tasks.py` (as OP-6)
+- FP: `<package_name>/confirm.py`, `<package_name>/agentcore_project/gen.py` (`generate_teardown`), the `ac_down` step of `mise_tasks.py`, `.mise/tasks/{confirm,ac-gen-teardown,config-delete}.py`, `tests/test_confirm.py`
+- CMD: `mise run ac-chain-down-<env>`, or a single step; `mise run ac-status-<env>` afterwards
+- Docs: `70-teardown.md`
 
 ### OP-7-1 `ac-down-<env>`: the runtimes
 
-The CLI's own teardown: `agentcore deploy --yes` of a project that declares nothing destroys the target's stack and removes the target from `deployed-state.json`. Since `agentcore.json` is generated, the task writes the empty one (`ac-gen-teardown`), deploys it, then runs `ac-gen` to put the real project back. `bind()` sits inside `if (runtimes.size > 0)` so the empty project still synthesizes.
+The CLI's own teardown: `agentcore deploy --yes` of a project that declares nothing destroys the target's stack and removes the target from `deployed-state.json`. Since `agentcore.json` is generated, the task writes the empty one (`ac-gen-teardown`), sets `trap '<ac-gen>' EXIT`, and deploys it: the real project comes back when the task ends, failed or not. `bind()` sits inside `if (runtimes.size > 0)` so the empty project still synthesizes.
 
 ### OP-7-2 The chain
 
@@ -358,7 +358,7 @@ The CLI's own teardown: `agentcore deploy --yes` of a project that declares noth
 
 ### OP-7-3 After a teardown
 
-Commit the changed `deployed-state.json`. If the deploy of the empty project failed, the empty `agentcore.json` stays until the next `ac-*` task regenerates it.
+`ac-status-<env>` shows nothing deployed; commit the changed `deployed-state.json`; check for what neither stack owns, such as the runtimes' log groups.
 
 ---
 
@@ -457,7 +457,7 @@ The references, one per OP, numbered `<OP><part>` so the file order is the OP or
 | `40-agent-runtime.md` | OP-4 | done | `08` (deleted), `02` section 4.2 |
 | `50-` to `53-` | OP-5, one per layer | done | `03`, `04`, `06`, `10` (deleted), `07` sections 1, 2, 4, `05` section 4 |
 | `60-deploy.md` | OP-6 | done | `07` (deleted), `11` sections 1, 2, 4 |
-| `70-teardown.md` | OP-7 | to write | `11` sections 5 and 6 |
+| `70-teardown.md` | OP-7 | done | `11` sections 5 and 6 |
 | `80-invoke-and-observe.md` | OP-8 | to write | `02`, `05` section 2, `11` sections 3 and 4 |
 | `90-maintain.md` | OP-9 | to write | `12` |
 | `99-ood.md` | the design | this file | |

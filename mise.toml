@@ -255,19 +255,19 @@ echo 'Commit agentcore/.cli/deployed-state.json if it changed: everyone who depl
 """
 
 [tasks."ac-down-dev"]
-description = "🔴 Destroy every AgentCore runtime of the dev target: deploy an empty project with --yes, then generate the real one again (writes to AWS; keeps the agentcore-deps stack and the config)"
+description = "🔴 Destroy every AgentCore runtime of the dev target: deploy an empty project with --yes, then generate the real one again, even if the deploy fails (writes to AWS; keeps the agentcore-deps stack and the config)"
 env = { ENV_NAME = "dev" }
 depends = ["inst"]
 run = """
-echo '>>> ac-down-dev: Destroy every AgentCore runtime of the dev target: deploy an empty project with --yes, then generate the real one again (writes to AWS; keeps the agentcore-deps stack and the config)'
+echo '>>> ac-down-dev: Destroy every AgentCore runtime of the dev target: deploy an empty project with --yes, then generate the real one again, even if the deploy fails (writes to AWS; keeps the agentcore-deps stack and the config)'
 .venv/bin/python .mise/tasks/confirm.py --action 'Destroy every AgentCore runtime of dev?' --skip_var CONFIRM_YES --skip_var CONFIRMED_BY_CHAIN
 echo '--- CloudFormation console ---'
 echo 'AgentCore stack: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=AgentCore-AcRtDemo-dev&filteringStatus=active&viewNested=true'
 .venv/bin/python .mise/tasks/ac-gen-teardown.py
+trap '.venv/bin/python .mise/tasks/ac-gen.py' EXIT
 echo '--- Run command ---'
 echo 'AWS_PROFILE={{env.AWS_PROFILE_FOR_DEV}} agentcore deploy --target dev --yes'
 AWS_PROFILE={{env.AWS_PROFILE_FOR_DEV}} agentcore deploy --target dev --yes
-.venv/bin/python .mise/tasks/ac-gen.py
 echo 'Commit agentcore/.cli/deployed-state.json if it changed: everyone who deploys shares it'
 """
 
@@ -329,7 +329,7 @@ description = "🔴 Destroy everything AgentCore of dev: ac-down-dev → cdk-dow
 env = { CONFIRMED_BY_CHAIN = "true" }
 run = [
     "echo '=== ac-chain-down-dev: Destroy everything AgentCore of dev, in this order ==='",
-    "echo '  1. ac-down-dev: Destroy every AgentCore runtime of the dev target: deploy an empty project with --yes, then generate the real one again (writes to AWS; keeps the agentcore-deps stack and the config)'",
+    "echo '  1. ac-down-dev: Destroy every AgentCore runtime of the dev target: deploy an empty project with --yes, then generate the real one again, even if the deploy fails (writes to AWS; keeps the agentcore-deps stack and the config)'",
     "echo '  2. cdk-down-dev-agentcore-deps-stack: Destroy stack agentcore-deps of dev (force, no confirmation)'",
     "echo '  3. config-delete-dev: Delete the config of dev from SSM Parameter Store (writes to AWS)'",
     ".venv/bin/python .mise/tasks/confirm.py --action 'Destroy the AgentCore runtimes, the agentcore-deps stack, and the config of dev?' --skip_var CONFIRM_YES",
@@ -621,19 +621,19 @@ echo 'Commit agentcore/.cli/deployed-state.json if it changed: everyone who depl
 """
 
 [tasks."ac-down-tst"]
-description = "🔴 Destroy every AgentCore runtime of the tst target: deploy an empty project with --yes, then generate the real one again (writes to AWS; keeps the agentcore-deps stack and the config)"
+description = "🔴 Destroy every AgentCore runtime of the tst target: deploy an empty project with --yes, then generate the real one again, even if the deploy fails (writes to AWS; keeps the agentcore-deps stack and the config)"
 env = { ENV_NAME = "tst" }
 depends = ["inst"]
 run = """
-echo '>>> ac-down-tst: Destroy every AgentCore runtime of the tst target: deploy an empty project with --yes, then generate the real one again (writes to AWS; keeps the agentcore-deps stack and the config)'
+echo '>>> ac-down-tst: Destroy every AgentCore runtime of the tst target: deploy an empty project with --yes, then generate the real one again, even if the deploy fails (writes to AWS; keeps the agentcore-deps stack and the config)'
 .venv/bin/python .mise/tasks/confirm.py --action 'Destroy every AgentCore runtime of tst?' --skip_var CONFIRM_YES --skip_var CONFIRMED_BY_CHAIN
 echo '--- CloudFormation console ---'
 echo 'AgentCore stack: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=AgentCore-AcRtDemo-tst&filteringStatus=active&viewNested=true'
 .venv/bin/python .mise/tasks/ac-gen-teardown.py
+trap '.venv/bin/python .mise/tasks/ac-gen.py' EXIT
 echo '--- Run command ---'
 echo 'AWS_PROFILE={{env.AWS_PROFILE_FOR_TST}} agentcore deploy --target tst --yes'
 AWS_PROFILE={{env.AWS_PROFILE_FOR_TST}} agentcore deploy --target tst --yes
-.venv/bin/python .mise/tasks/ac-gen.py
 echo 'Commit agentcore/.cli/deployed-state.json if it changed: everyone who deploys shares it'
 """
 
@@ -695,7 +695,7 @@ description = "🔴 Destroy everything AgentCore of tst: ac-down-tst → cdk-dow
 env = { CONFIRMED_BY_CHAIN = "true" }
 run = [
     "echo '=== ac-chain-down-tst: Destroy everything AgentCore of tst, in this order ==='",
-    "echo '  1. ac-down-tst: Destroy every AgentCore runtime of the tst target: deploy an empty project with --yes, then generate the real one again (writes to AWS; keeps the agentcore-deps stack and the config)'",
+    "echo '  1. ac-down-tst: Destroy every AgentCore runtime of the tst target: deploy an empty project with --yes, then generate the real one again, even if the deploy fails (writes to AWS; keeps the agentcore-deps stack and the config)'",
     "echo '  2. cdk-down-tst-agentcore-deps-stack: Destroy stack agentcore-deps of tst (force, no confirmation)'",
     "echo '  3. config-delete-tst: Delete the config of tst from SSM Parameter Store (writes to AWS)'",
     ".venv/bin/python .mise/tasks/confirm.py --action 'Destroy the AgentCore runtimes, the agentcore-deps stack, and the config of tst?' --skip_var CONFIRM_YES",
@@ -987,19 +987,19 @@ echo 'Commit agentcore/.cli/deployed-state.json if it changed: everyone who depl
 """
 
 [tasks."ac-down-prd"]
-description = "🔴 Destroy every AgentCore runtime of the prd target: deploy an empty project with --yes, then generate the real one again (writes to AWS; keeps the agentcore-deps stack and the config)"
+description = "🔴 Destroy every AgentCore runtime of the prd target: deploy an empty project with --yes, then generate the real one again, even if the deploy fails (writes to AWS; keeps the agentcore-deps stack and the config)"
 env = { ENV_NAME = "prd" }
 depends = ["inst"]
 run = """
-echo '>>> ac-down-prd: Destroy every AgentCore runtime of the prd target: deploy an empty project with --yes, then generate the real one again (writes to AWS; keeps the agentcore-deps stack and the config)'
+echo '>>> ac-down-prd: Destroy every AgentCore runtime of the prd target: deploy an empty project with --yes, then generate the real one again, even if the deploy fails (writes to AWS; keeps the agentcore-deps stack and the config)'
 .venv/bin/python .mise/tasks/confirm.py --action 'Destroy every AgentCore runtime of prd?' --skip_var CONFIRM_YES --skip_var CONFIRMED_BY_CHAIN
 echo '--- CloudFormation console ---'
 echo 'AgentCore stack: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=AgentCore-AcRtDemo-prd&filteringStatus=active&viewNested=true'
 .venv/bin/python .mise/tasks/ac-gen-teardown.py
+trap '.venv/bin/python .mise/tasks/ac-gen.py' EXIT
 echo '--- Run command ---'
 echo 'AWS_PROFILE={{env.AWS_PROFILE_FOR_PRD}} agentcore deploy --target prd --yes'
 AWS_PROFILE={{env.AWS_PROFILE_FOR_PRD}} agentcore deploy --target prd --yes
-.venv/bin/python .mise/tasks/ac-gen.py
 echo 'Commit agentcore/.cli/deployed-state.json if it changed: everyone who deploys shares it'
 """
 
@@ -1061,7 +1061,7 @@ description = "🔴 Destroy everything AgentCore of prd: ac-down-prd → cdk-dow
 env = { CONFIRMED_BY_CHAIN = "true" }
 run = [
     "echo '=== ac-chain-down-prd: Destroy everything AgentCore of prd, in this order ==='",
-    "echo '  1. ac-down-prd: Destroy every AgentCore runtime of the prd target: deploy an empty project with --yes, then generate the real one again (writes to AWS; keeps the agentcore-deps stack and the config)'",
+    "echo '  1. ac-down-prd: Destroy every AgentCore runtime of the prd target: deploy an empty project with --yes, then generate the real one again, even if the deploy fails (writes to AWS; keeps the agentcore-deps stack and the config)'",
     "echo '  2. cdk-down-prd-agentcore-deps-stack: Destroy stack agentcore-deps of prd (force, no confirmation)'",
     "echo '  3. config-delete-prd: Delete the config of prd from SSM Parameter Store (writes to AWS)'",
     ".venv/bin/python .mise/tasks/confirm.py --action 'Destroy the AgentCore runtimes, the agentcore-deps stack, and the config of prd?' --skip_var CONFIRM_YES",

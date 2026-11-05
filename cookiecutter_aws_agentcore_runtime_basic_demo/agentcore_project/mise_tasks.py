@@ -216,16 +216,17 @@ def get_env_steps(
             emoji="🔴",
             summary=(
                 f"Destroy every AgentCore runtime of the {target_name} target: deploy an "
-                f"empty project with --yes, then generate the real one again (writes to "
-                f"AWS; keeps the agentcore-deps stack and the config)"
+                f"empty project with --yes, then generate the real one again, even if the "
+                f"deploy fails (writes to AWS; keeps the agentcore-deps stack and the config)"
             ),
             confirm=f"Destroy every AgentCore runtime of {env_name}?",
             script="\n".join(
                 [
                     *console,
                     ".venv/bin/python .mise/tasks/ac-gen-teardown.py",
+                    # restore the real project when the task ends, failed or not
+                    f"trap '{gen}' EXIT",
                     *_run_command(down_command),
-                    gen,
                     DEPLOYED_STATE_REMINDER,
                 ]
             ),
