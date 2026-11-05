@@ -30,7 +30,7 @@ from ..runtime import runtime
 from .one_01_config import OneConfigMixin
 from .one_02_boto_ses import OneBotoSesMixin
 from .one_03_cdk import OneCdkMixin
-from .one_04_devops import OneDevOpsMixin
+from .one_04_agentcore_deps import OneAgentCoreDepsMixin
 from .one_05_db import OneDbMixin
 from .one_06_config_deploy import OneConfigDeployMixin
 
@@ -39,7 +39,7 @@ class One(
     OneConfigMixin,
     OneBotoSesMixin,
     OneCdkMixin,
-    OneDevOpsMixin,
+    OneAgentCoreDepsMixin,
     OneDbMixin,
     OneConfigDeployMixin,
 ):

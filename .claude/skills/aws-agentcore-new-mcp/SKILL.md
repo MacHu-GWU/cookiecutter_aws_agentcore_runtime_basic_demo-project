@@ -14,11 +14,11 @@ Read ../aws-agentcore-base/SKILL.md, then:
 - ../aws-agentcore-base/references/51-agentcore-config.md
 - ../aws-agentcore-base/references/52-agentcore-packaging.md
 - ../aws-agentcore-base/references/53-agentcore-dev.md
-- ../aws-agentcore-base/references/legacy/07-agentcore-vs-other-resources.md (permissions and resources; until OP-6 is rewritten)
+- ../aws-agentcore-base/references/60-deploy.md
 
-A short citation such as `30` means the new reference of that number; a citation of `07` or `11` means the legacy file `references/legacy/NN-*.md`, until OP-6 to OP-8 are rewritten.
+A short citation such as `30` means the reference of that number; a citation of `11` means the legacy file `references/legacy/11-deploy-and-troubleshoot.md`, until OP-7 and OP-8 are rewritten.
 
-Read ../aws-agentcore-base/references/legacy/11-deploy-and-troubleshoot.md before a deploy. For new modules and tests, follow the `pywf-oss-add-module` and `pywf-oss-write-test` skills.
+For new modules and tests, follow the `pywf-oss-add-module` and `pywf-oss-write-test` skills.
 
 ## 1. Agree on the design first
 
@@ -46,7 +46,7 @@ Then propose, in one message:
 3. **Copy it into the runtimes** (`52`, section 2): add the subpackage to `RUNTIME_SUBPACKAGES` in `agentcore_project/codezip.py`, and to the `allowed` list of `test_assemble_runtime_dir`. A new third-party import goes in `[dependency-groups] agentcore` (and the base dependencies if the dev machine imports it), then `uv lock`.
 4. **Runtime module** (`30-mcp-runtime.md`, section 3): copy the shape of `runtimes/power_plant_mcp.py`: `new_mcp_server`, one thin tool per query with `doc_from`, `main()` with `print_config_source` then `run_mcp_server`. Test it like `tests/runtimes/test_runtimes_power_plant_mcp.py`: tool list, descriptions = docstrings, no hidden parameter in the input schema, an output schema, a call per tool, `main()`.
 5. **Register it** (`51`, section 7): a `RuntimeSpec(name=..., module="runtimes.<snake>_mcp", protocol=RuntimeProtocolEnum.MCP)` in `get_runtime_specs()` of `agentcore_project/registry.py`; update `test_get_runtime_specs`.
-6. **Permissions and resources** (`07`): statements in the `agentcore_deps` policy, new resources as new `s0N_` methods of that stack, their names in the config; assert them in the stack's test. New config fields: add to `Config`, every `config/*.json5` that needs them, `config/example/`, and the `config` fixture plus fake secret files in `tests/conftest.py`.
+6. **Permissions and resources** (`60`, section 1): statements in the `agentcore_deps` policy, new resources as new `s0N_` methods of that stack, their names in the config; assert them in the stack's test. New config fields: add to `Config`, every `config/*.json5` that needs them, `config/example/`, and the `config` fixture plus fake secret files in `tests/conftest.py`.
 7. **Local tasks** (`30`, section 4; `53` for `ac-dev-*`): in `mise.toml`, a port variable `LOCAL_<NAME>_PORT` in `[env]`, then `ac-local-<slug>` and `ac-dev-<slug>` copied from `ac-local-mcp` / `ac-dev-mcp` with the new port, module, and runtime name. For a call task, copy `ac-local-mcp-call` with the new port and a sample `--tool` / `--arguments` (`30-mcp-runtime.md`, section 4); the script is generic.
 8. **An agent that calls it**: a `bind()` line and one more `get_mcp_connection` in the agent (`40-agent-runtime.md`, sections 4 and 6), or the `aws-agentcore-new-agent` skill for a new agent.
 
@@ -64,7 +64,7 @@ mise run build-doc
 
 Then start it with `ac-local-<slug>` and call it. `ac-dev-<slug>` also needs the config deployed (`config-deploy-<env>`), which changes AWS: ask first.
 
-Deploying is a separate step with the user's yes (`11`): `mise run ac-chain-up-<env>` for the whole chain, or only the steps that changed (`cdk-up-<env>-agentcore-deps-stack`, then `ac-deploy-<env>`).
+Deploying is a separate step with the user's yes (`60`): `mise run gen-env-tasks` first (the new runtime's `ac-invoke-<env>-<slug>`), then `mise run ac-chain-up-<env>` for the whole chain, or only the steps that changed (`cdk-up-<env>-agentcore-deps-stack`, then `ac-deploy-<env>`); then `mise run ac-test-<env>`.
 
 ## 4. Report
 

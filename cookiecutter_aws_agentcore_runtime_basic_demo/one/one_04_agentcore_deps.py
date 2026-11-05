@@ -61,7 +61,7 @@ def check_agentcore_deps(
     return ok
 
 
-class OneDevOpsMixin:
+class OneAgentCoreDepsMixin:
     """
     The checks before ``agentcore deploy``.
     """

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from cookiecutter_aws_agentcore_runtime_basic_demo.one.one_04_devops import (
+from cookiecutter_aws_agentcore_runtime_basic_demo.one.one_04_agentcore_deps import (
     check_agentcore_deps,
 )
 
@@ -63,6 +63,6 @@ if __name__ == "__main__":
 
     run_cov_test(
         __file__,
-        "cookiecutter_aws_agentcore_runtime_basic_demo.one.one_04_devops",
+        "cookiecutter_aws_agentcore_runtime_basic_demo.one.one_04_agentcore_deps",
         preview=False,
     )

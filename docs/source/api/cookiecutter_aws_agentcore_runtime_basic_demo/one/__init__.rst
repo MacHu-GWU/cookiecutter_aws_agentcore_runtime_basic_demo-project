@@ -15,6 +15,7 @@ sub packages and modules
     one_01_config <one_01_config>
     one_02_boto_ses <one_02_boto_ses>
     one_03_cdk <one_03_cdk>
-    one_04_devops <one_04_devops>
+    one_04_agentcore_deps <one_04_agentcore_deps>
     one_05_db <one_05_db>
+    one_06_config_deploy <one_06_config_deploy>
     

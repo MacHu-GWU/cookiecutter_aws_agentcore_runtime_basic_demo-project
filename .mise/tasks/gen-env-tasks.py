@@ -2,11 +2,11 @@
 
 """
 Rewrite the <env-tasks> block of mise.toml from the entries of StackCtxEnum,
-the members of EnvNameEnum, and the config of each environment.
+the members of EnvNameEnum, the runtime registry, and the config of each environment.
 """
 
 from cookiecutter_aws_agentcore_runtime_basic_demo.paths import path_enum
-from cookiecutter_aws_agentcore_runtime_basic_demo.cdk.mise_tasks import (
+from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.mise_tasks import (
     render_project_env_tasks,
 )
 from cookiecutter_aws_agentcore_runtime_basic_demo.cdk.mise_tasks import (

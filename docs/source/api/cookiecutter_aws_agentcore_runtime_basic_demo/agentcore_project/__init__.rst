@@ -10,8 +10,9 @@ sub packages and modules
 .. toctree::
     :maxdepth: 1
 
+    codezip <codezip>
     gen <gen>
-    local_port <local_port>
+    mise_tasks <mise_tasks>
     project_files <project_files>
-    runtime_dir <runtime_dir>
+    registry <registry>
     

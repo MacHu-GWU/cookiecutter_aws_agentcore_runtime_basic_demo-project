@@ -28,6 +28,18 @@ def test_get_runtime_specs(config: Config):
         RuntimeProtocolEnum.HTTP,
     ]
 
+    assert [spec.slug for spec in specs] == ["power-plant-mcp", "site-agent"]
+
+
+def test_sample_payloads(config: Config):
+    """An agent gets a prompt; an MCP server a whole JSON-RPC request."""
+    for spec in get_runtime_specs(config):
+        if spec.protocol == RuntimeProtocolEnum.HTTP:
+            assert isinstance(spec.sample_payload["prompt"], str)
+        else:
+            assert spec.sample_payload["jsonrpc"] == "2.0"
+            assert spec.sample_payload["method"] == "tools/call"
+
 
 def test_every_runtime_module_has_its_entry_points(config: Config):
     """Each module has main(), and app for HTTP: what the generated main.py imports."""

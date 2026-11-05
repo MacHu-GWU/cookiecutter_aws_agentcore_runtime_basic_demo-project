@@ -296,10 +296,10 @@ Different from OP-3-3 and OP-4-3: this runs the **packaged** copy, as close to d
 
 Put an environment's AgentCore part into AWS, in dependency order, then prove it works there. **Every step asks first.**
 
-- EP: the AgentCore task generator (new: `<package_name>/agentcore_project/mise_tasks.py`, split from `cdk/mise_tasks.py`), which renders the deploy tasks
-- FP: `<package_name>/cdk/stacks/agentcore_deps_stack.py`, `<package_name>/one/one_04_devops.py` (the check before deploy), `.mise/tasks/{ac-check-deps,ac-gen,ac-check-wheels}.py`; the config step is OP-2's, the `<env-tasks>` block of `mise.toml`, `tests_int/**`
-- CMD: `mise run ac-chain-up-<env>`, or a single step; free: `mise run -n <task>`, `cdk-plan-<env>-agentcore-deps-stack`
-- Docs: `60-deploy.md` (to write)
+- EP: `<package_name>/agentcore_project/mise_tasks.py`, which renders the AgentCore tasks of every environment (split from `cdk/mise_tasks.py`)
+- FP: `<package_name>/cdk/stacks/agentcore_deps_stack.py`, `<package_name>/one/one_04_agentcore_deps.py` (the check before deploy), `<package_name>/agentcore_project/mise_tasks.py`, `sample_payload` of the registry, `.mise/tasks/{ac-check-deps,ac-gen,ac-check-wheels}.py`, the `<env-tasks>` block of `mise.toml`, `agentcore/.cli/deployed-state.json`; the config step is OP-2's
+- CMD: `mise run ac-chain-up-<env>`, or a single step; `mise run ac-test-<env>`; free: `mise run -n <task>`, `cdk-plan-<env>-agentcore-deps-stack`, `gen-env-tasks`
+- Docs: `60-deploy.md`
 
 ### OP-6-1 What the runtimes depend on
 
@@ -321,12 +321,14 @@ The `agentcore_deps` CDK stack: the managed policy attached to every execution r
 2. `ac-gen` for `<env>`.
 3. `ac-check-wheels`.
 4. `agentcore deploy --target <env>` with the environment's profile: the CLI checks the account, synthesizes, packages, deploys.
-5. Print the reminder to commit `agentcore/.cli/deployed-state.json` (new).
+5. Print the reminder to commit `agentcore/.cli/deployed-state.json`.
 
 ### OP-6-4 Test it in the cloud
 
-- By hand: `mise run ac-invoke-<env>-<slug>` (new, generated per runtime and environment) through the clients of OP-8-1.
-- Automated: `tests_int/test_agentcore_runtimes.py` (new): list the MCP tools and ask each agent once, against the deployed environment; `mise run int-test` (needs a deploy).
+- `mise run ac-status-<env>`: `agentcore status`, what is deployed.
+- `mise run ac-invoke-<env>-<slug>`: `agentcore invoke` of one deployed runtime with the `sample_payload` of its registry entry (a JSON-RPC request for an MCP runtime); `SESSION_ID` adds `--session-id`.
+- `mise run ac-test-<env>`: the status, then every runtime invoked once.
+- Still open (OP-8): a Python client and `tests_int/` checks that call the deployed runtimes without the CLI.
 - A healthy start logs the config source line of `main()` (OP-3-2, OP-4-2).
 
 ---
@@ -439,9 +441,9 @@ A change that breaks this design changes this file in the same change. A fact a 
 | R6 | `ac-local-*`, `ac-dev-*`, the call tasks, `ac-invoke-dev-agent` are hand-written, with runtime names and module paths inline; `ac-dev-*` and `ac-invoke-dev-agent` still set `us-east-1` and the dev profile (`ac-local-agent` no longer does, OP-4) | generated per runtime (and environment), region and profile from the environment | OP-9-4 |
 | R7 | done for local calls: `devtools/mcp_client.py` (OP-3), `devtools/agent_client.py` (OP-4). Left: calling a deployed runtime (SigV4, `InvokeAgentRuntime`) | one tested client module; scripts are thin EPs | OP-8-1 |
 | R8 | done in OP-3: `local_port.py` and the MCP client are in `<package_name>/devtools/`, dev tooling never copied into a runtime | | OP-3-3 |
-| R9 | the AgentCore task generation is inside `cdk/mise_tasks.py` | its own module, called by `gen-env-tasks` | OP-6, OP-7 |
+| R9 | done in OP-6: `agentcore_project/mise_tasks.py` renders the AgentCore tasks and the whole block; `cdk/mise_tasks.py` knows nothing of AgentCore | | OP-6, OP-7 |
 | R10 | done in OP-5: `mise run ac-check-wheels`; the loop moved into `codezip.check_codezip_installs` | | OP-5-3 |
-| R11 | nothing tests a deployed runtime; `ac-invoke-dev-agent` sends no session ID | `ac-invoke-<env>-<slug>` with `SESSION_ID`, `tests_int/test_agentcore_runtimes.py` | OP-6-4, OP-8 |
+| R11 | done in OP-6 for the CLI: `ac-status-<env>`, `ac-invoke-<env>-<slug>` with `SESSION_ID`, `ac-test-<env>`. Left: `tests_int/` checks through a Python client | | OP-6-4, OP-8 |
 | R12 | the references were by topic | rewritten one per OP, in OP order; the old ones wait in `legacy/` (see below) | OP-9-5 |
 
 The references, one per OP, numbered `<OP><part>` so the file order is the OP order. Each opens with "Implements OP-N" and its EP, FP, CMD, and cites only lower numbers. The legacy file is what to read for facts until the new one is written; the new one is written from the code, the legacy one is only a source.
@@ -454,7 +456,7 @@ The references, one per OP, numbered `<OP><part>` so the file order is the OP or
 | `30-mcp-runtime.md` | OP-3 | done | `09` (deleted), `10` sections 2 and 3 |
 | `40-agent-runtime.md` | OP-4 | done | `08` (deleted), `02` section 4.2 |
 | `50-` to `53-` | OP-5, one per layer | done | `03`, `04`, `06`, `10` (deleted), `07` sections 1, 2, 4, `05` section 4 |
-| `60-deploy.md` | OP-6 | to write | `07`, `11` sections 1 to 3 |
+| `60-deploy.md` | OP-6 | done | `07` (deleted), `11` sections 1, 2, 4 |
 | `70-teardown.md` | OP-7 | to write | `11` sections 5 and 6 |
 | `80-invoke-and-observe.md` | OP-8 | to write | `02`, `05` section 2, `11` sections 3 and 4 |
 | `90-maintain.md` | OP-9 | to write | `12` |

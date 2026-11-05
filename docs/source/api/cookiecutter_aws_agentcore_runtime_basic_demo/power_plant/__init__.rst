@@ -15,5 +15,6 @@ sub packages and modules
     orm <orm>
     queries <queries>
     schemas <schemas>
+    site_agent <site_agent>
     weather <weather>
     

@@ -27,7 +27,7 @@ Seed repo: [`mise_tasks.py`](https://github.com/MacHu-GWU/cookiecutter_aws_cdk_d
 - Every task but synth passes `--profile {{env.AWS_PROFILE_FOR_<ENV>}}` (`06-boto-session.md`) and stops if the variable is unset.
 - **Before the command, every task prints the CloudFormation console URL** (`config.cft_stack_url_<x>`) of each stack it acts on, then the command line.
 
-This project adds, per environment, in the same block:
+This project adds, per environment, in the same block, rendered by `<package_name>/agentcore_project/mise_tasks.py` and passed to `render_env_tasks_block` (details in the `aws-agentcore-base` skill, `60-deploy.md`):
 
 | Task | Runs | Calls AWS |
 | :--- | :--- | :--- |
@@ -37,6 +37,9 @@ This project adds, per environment, in the same block:
 | `ac-down-<env>` | `agentcore deploy --target <env> --yes` of an empty generated project (destroys its runtimes), then `ac-gen` again | changes |
 | `ac-chain-up-<env>` | `config-deploy-<env>` → `cdk-up-<env>-agentcore-deps-stack` → `ac-deploy-<env>`, in order | changes |
 | `ac-chain-down-<env>` | after one yes/no question: `ac-down-<env>` → `cdk-down-<env>-agentcore-deps-stack` → `config-delete-<env>` | changes |
+| `ac-status-<env>` | `agentcore status --target <env>` | reads |
+| `ac-invoke-<env>-<slug>` | `agentcore invoke` of one deployed runtime with its sample payload | calls the runtime |
+| `ac-test-<env>` | `ac-status-<env>`, then every `ac-invoke-<env>-<slug>` | calls the runtimes |
 
 Every generated task first prints `>>> <task>: <what it does>`. A destructive task that is not a `cdk-*` one (`ac-down-<env>`, `config-delete-<env>`, `ac-chain-down-<env>`) then asks yes or no through `<pkg>/confirm.py` (only `y` or `yes` goes on; `CONFIRM_YES=true` skips it; a chain sets `CONFIRMED_BY_CHAIN=true` so its steps do not ask again); never mise's `confirm`, which takes a bare Enter as yes; a chain task first prints its whole chain, then runs its steps with `{ task = ... }` entries, which stop at the first failure.
 

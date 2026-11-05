@@ -14,11 +14,11 @@ Read ../aws-agentcore-base/SKILL.md, then:
 - ../aws-agentcore-base/references/51-agentcore-config.md
 - ../aws-agentcore-base/references/52-agentcore-packaging.md
 - ../aws-agentcore-base/references/53-agentcore-dev.md
-- ../aws-agentcore-base/references/legacy/07-agentcore-vs-other-resources.md (permissions and resources; until OP-6 is rewritten)
+- ../aws-agentcore-base/references/60-deploy.md
 
-A short citation such as `30` means the new reference of that number; a citation of `07` or `11` means the legacy file `references/legacy/NN-*.md`, until OP-6 to OP-8 are rewritten.
+A short citation such as `30` means the reference of that number; a citation of `11` means the legacy file `references/legacy/11-deploy-and-troubleshoot.md`, until OP-7 and OP-8 are rewritten.
 
-Read ../aws-agentcore-base/references/legacy/02-runtime-sessions-and-cold-starts.md when latency matters, and ../aws-agentcore-base/references/legacy/11-deploy-and-troubleshoot.md before a deploy. Use the `aws-agentcore-new-mcp` skill first if the agent needs an MCP runtime that does not exist yet. For new modules and tests, follow the `pywf-oss-add-module` and `pywf-oss-write-test` skills.
+Read ../aws-agentcore-base/references/legacy/02-runtime-sessions-and-cold-starts.md when latency matters, and ../aws-agentcore-base/references/legacy/11-deploy-and-troubleshoot.md when an invocation fails. Use the `aws-agentcore-new-mcp` skill first if the agent needs an MCP runtime that does not exist yet. For new modules and tests, follow the `pywf-oss-add-module` and `pywf-oss-write-test` skills.
 
 ## 1. Agree on the design first
 
@@ -48,8 +48,8 @@ Then propose, in one message:
 4. **Runtime module** (`40-agent-runtime.md`, sections 3 and 4): copy the shape of `runtimes/site_agent.py`: `make_agent`, `build_agent` (with `one.new_boto_ses()`, `one.config.<snake>_model_id`, one `get_mcp_connection` per MCP runtime), `agent = ProcessAgent(build_agent)`, `invoke`, `main()`. Reuse `runtimes/common.py` and `runtimes/mcp_connection.py`; never copy them. Test it like `tests/runtimes/test_runtimes_site_agent.py`.
 5. **Register it** (`51`, section 7): a `RuntimeSpec(name=..., module="runtimes.<snake>_agent", protocol=RuntimeProtocolEnum.HTTP)` in `get_runtime_specs()` of `agentcore_project/registry.py`; update `test_get_runtime_specs`. The `HTTP` protocol makes the generated `main.py` expose `app` too (`52`, section 1).
 6. **Bind its MCP runtimes**: a `this.application.runtime('<Mcp>').bind(this.application.runtime('<Agent>'))` line per MCP runtime in `agentcore/cdk/lib/cdk-stack.ts` (`40-agent-runtime.md`, section 4). Nothing else goes in that file (`50`, section 4).
-7. **Permissions** (`07`): the CLI-created role can already call Bedrock models; add statements to the `agentcore_deps` policy only for other AWS access the agent's own tools need.
-8. **Local tasks** (`40-agent-runtime.md`, section 5; `53` for `ac-dev-*`): a port variable `LOCAL_<NAME>_PORT` in `[env]`, then `ac-local-<slug>` and `ac-dev-<slug>` copied from `ac-local-agent` / `ac-dev-agent`, with `MCP_URL` (or one variable per MCP runtime) pointing at the local MCP ports, and a `-call` task like `ac-local-agent-call` with a sample `--prompt`. For the deployed agent, a task like `ac-invoke-dev-agent`.
+7. **Permissions** (`60`, section 1): the CLI-created role can already call Bedrock models; add statements to the `agentcore_deps` policy only for other AWS access the agent's own tools need.
+8. **Local tasks** (`40-agent-runtime.md`, section 5; `53` for `ac-dev-*`): a port variable `LOCAL_<NAME>_PORT` in `[env]`, then `ac-local-<slug>` and `ac-dev-<slug>` copied from `ac-local-agent` / `ac-dev-agent`, with `MCP_URL` (or one variable per MCP runtime) pointing at the local MCP ports, and a `-call` task like `ac-local-agent-call` with a sample `--prompt`. Its registry entry gets a sample `{"prompt": ...}` payload, for the generated `ac-invoke-<env>-<slug>` (`51`, section 1).
 
 ## 3. Verify
 
@@ -65,7 +65,7 @@ mise run build-doc
 
 Then start its MCP servers and the agent with the `ac-local-*` tasks, and send the sample payload. That calls the Bedrock model with the dev profile: say so before running it. `ac-dev-<slug>` also needs the config deployed (`config-deploy-<env>`), which changes AWS: ask first.
 
-Deploying is a separate step with the user's yes (`11`): `mise run ac-chain-up-<env>` for the whole chain, or only `ac-deploy-<env>` when only code changed.
+Deploying is a separate step with the user's yes (`60`): `mise run gen-env-tasks` first, then `mise run ac-chain-up-<env>` for the whole chain, or only `ac-deploy-<env>` when only code changed; then `mise run ac-test-<env>`.
 
 ## 4. Report
 
