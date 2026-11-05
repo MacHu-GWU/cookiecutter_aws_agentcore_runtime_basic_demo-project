@@ -111,6 +111,8 @@ def test_deploy_and_test_tasks():
         "AWS_PROFILE={{env.AWS_PROFILE_FOR_PRD}}"
         in tasks["ac-invoke-prd-site-agent"]["run"]
     )
+    logs = tasks["ac-logs-dev-site-agent"]["run"]
+    assert "logs runtime --name SiteAgent --target dev --since ${SINCE:-30m}" in logs
 
 
 def test_ac_down_restores_the_project():

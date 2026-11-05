@@ -17,9 +17,9 @@ Read ../aws-agentcore-base/SKILL.md, then:
 - ../aws-agentcore-base/references/60-deploy.md
 - ../aws-agentcore-base/references/70-teardown.md (to remove a runtime or an environment)
 
-A short citation such as `30` means the reference of that number; a citation of `11` means the legacy file `references/legacy/11-deploy-and-troubleshoot.md`, until OP-8 is rewritten.
+A short citation such as `30` means the reference of that number. Read ../aws-agentcore-base/references/80-invoke-and-observe.md when a deployed runtime is slow or fails, or to call it from code.
 
-Read ../aws-agentcore-base/references/legacy/02-runtime-sessions-and-cold-starts.md when latency matters, and ../aws-agentcore-base/references/legacy/11-deploy-and-troubleshoot.md when an invocation fails. Use the `aws-agentcore-new-mcp` skill first if the agent needs an MCP runtime that does not exist yet. For new modules and tests, follow the `pywf-oss-add-module` and `pywf-oss-write-test` skills.
+Use the `aws-agentcore-new-mcp` skill first if the agent needs an MCP runtime that does not exist yet. For new modules and tests, follow the `pywf-oss-add-module` and `pywf-oss-write-test` skills.
 
 ## 1. Agree on the design first
 
@@ -27,7 +27,7 @@ Ask, then propose, and wait for the user's yes before writing files:
 
 - **What the agent is for**, in one sentence; that becomes its system prompt.
 - **Its tools**: which of the project's MCP runtimes it uses, and which tools of its own (plain functions in a business subpackage, listed in `TOOLS` of its layer 1 module).
-- **The model**: a Bedrock model or cross-region inference profile the account can call. Check it before relying on it (`11`, section 4: an agreement can be `NOT_AVAILABLE` in an account although the console lists the model).
+- **The model**: a Bedrock model or cross-region inference profile the account can call. Check it before relying on it (`80`, section 6: an agreement can be `NOT_AVAILABLE` in an account although the console lists the model).
 - **The request and response**: the payload fields `invoke` reads, and what it returns.
 
 Then propose, in one message:

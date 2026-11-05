@@ -11,6 +11,7 @@ sub packages and modules
     :maxdepth: 1
 
     agent_client <agent_client>
+    agentcore_client <agentcore_client>
     local_port <local_port>
     mcp_client <mcp_client>
     

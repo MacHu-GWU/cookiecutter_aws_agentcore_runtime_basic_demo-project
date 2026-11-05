@@ -366,10 +366,10 @@ The CLI's own teardown: `agentcore deploy --yes` of a project that declares noth
 
 Call the deployed runtimes from a client program, keep the conversation and the microVMs warm, and find out what happened.
 
-- EP: the runtime clients (new: one tested module, such as `<package_name>/agentcore_project/client.py`), used by the `-call` tasks, the `ac-invoke-*` tasks, and the integration tests
-- FP: the client module and its test, `.mise/tasks/ac-local-*-call.py` and the invoke tasks as thin EPs, `tests_int/**`
-- CMD: `mise run ac-invoke-<env>-<slug>` (new), `agentcore status --target <env>`, `agentcore logs runtime`
-- Docs: `80-invoke-and-observe.md` (to write)
+- EP: `<package_name>/devtools/agentcore_client.py`: find a runtime's ARN, `InvokeAgentRuntime` with a session ID, the SigV4 connection of a deployed MCP runtime (used with `devtools/mcp_client.py`), the log group
+- FP: `<package_name>/devtools/{agentcore_client,mcp_client}.py`, the AgentCore clients of `one/one_02_boto_ses.py`, the `ac-logs` step of `agentcore_project/mise_tasks.py`, `tests_int/test_agentcore_runtimes.py`
+- CMD: `mise run int-test` (needs a deploy), `mise run ac-logs-<env>-<slug>`, `mise run ac-invoke-<env>-<slug>`
+- Docs: `80-invoke-and-observe.md`
 
 ### OP-8-1 Call a runtime from a client
 
@@ -439,18 +439,18 @@ A change that breaks this design changes this file in the same change. A fact a 
 | R4 | done in OP-4: the prompt and the own tools in `<domain>/<agent_name>.py`. Was: in the runtime module | layer 1, no `strands` import | OP-4-1 |
 | R5 | the registry (`agentcore_project/registry.py` since OP-5) has name, module, protocol only; ports in `mise.toml [env]`, sample calls in the call tasks | slug, port, sample call in the registry, when the tasks are generated | OP-9-4 |
 | R6 | `ac-local-*`, `ac-dev-*`, the call tasks, `ac-invoke-dev-agent` are hand-written, with runtime names and module paths inline; `ac-dev-*` and `ac-invoke-dev-agent` still set `us-east-1` and the dev profile (`ac-local-agent` no longer does, OP-4) | generated per runtime (and environment), region and profile from the environment | OP-9-4 |
-| R7 | done for local calls: `devtools/mcp_client.py` (OP-3), `devtools/agent_client.py` (OP-4). Left: calling a deployed runtime (SigV4, `InvokeAgentRuntime`) | one tested client module; scripts are thin EPs | OP-8-1 |
+| R7 | done: local calls in `devtools/mcp_client.py` (OP-3) and `devtools/agent_client.py` (OP-4); deployed calls in `devtools/agentcore_client.py` and the `auth` of `mcp_client` (OP-8) | one tested client module; scripts are thin EPs | OP-8-1 |
 | R8 | done in OP-3: `local_port.py` and the MCP client are in `<package_name>/devtools/`, dev tooling never copied into a runtime | | OP-3-3 |
 | R9 | done in OP-6: `agentcore_project/mise_tasks.py` renders the AgentCore tasks and the whole block; `cdk/mise_tasks.py` knows nothing of AgentCore | | OP-6, OP-7 |
 | R10 | done in OP-5: `mise run ac-check-wheels`; the loop moved into `codezip.check_codezip_installs` | | OP-5-3 |
-| R11 | done in OP-6 for the CLI: `ac-status-<env>`, `ac-invoke-<env>-<slug>` with `SESSION_ID`, `ac-test-<env>`. Left: `tests_int/` checks through a Python client | | OP-6-4, OP-8 |
+| R11 | done: the CLI tasks `ac-status-<env>`, `ac-invoke-<env>-<slug>`, `ac-test-<env>` (OP-6); `tests_int/test_agentcore_runtimes.py` through the Python client (OP-8) | | OP-6-4, OP-8 |
 | R12 | the references were by topic | rewritten one per OP, in OP order; the old ones wait in `legacy/` (see below) | OP-9-5 |
 
 The references, one per OP, numbered `<OP><part>` so the file order is the OP order. Each opens with "Implements OP-N" and its EP, FP, CMD, and cites only lower numbers. The legacy file is what to read for facts until the new one is written; the new one is written from the code, the legacy one is only a source.
 
 | New reference | OP | Status | Legacy sources (`legacy/`) |
 | :--- | :--- | :--- | :--- |
-| `00-agentcore-docs-mcp.md` | every OP (a habit) | done | `01` |
+| `00-agentcore-docs-mcp.md` | every OP (a habit) | done | `01` (deleted) |
 | `10-code-runtime.md` | OP-1 | done | `06` section 1 |
 | `20-centralized-config.md` | OP-2 | done | `06` section 3, `05` sections 1 and 2 |
 | `30-mcp-runtime.md` | OP-3 | done | `09` (deleted), `10` sections 2 and 3 |
@@ -458,7 +458,7 @@ The references, one per OP, numbered `<OP><part>` so the file order is the OP or
 | `50-` to `53-` | OP-5, one per layer | done | `03`, `04`, `06`, `10` (deleted), `07` sections 1, 2, 4, `05` section 4 |
 | `60-deploy.md` | OP-6 | done | `07` (deleted), `11` sections 1, 2, 4 |
 | `70-teardown.md` | OP-7 | done | `11` sections 5 and 6 |
-| `80-invoke-and-observe.md` | OP-8 | to write | `02`, `05` section 2, `11` sections 3 and 4 |
+| `80-invoke-and-observe.md` | OP-8 | done | `02`, `05`, `11` (deleted) |
 | `90-maintain.md` | OP-9 | to write | `12` |
 | `99-ood.md` | the design | this file | |
 

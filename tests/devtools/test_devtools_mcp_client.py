@@ -10,6 +10,7 @@ from cookiecutter_aws_agentcore_runtime_basic_demo.devtools.mcp_client import ma
 
 import json
 
+import httpx
 import pytest
 
 
@@ -29,6 +30,27 @@ def test_call_tool(mcp_url):
     assert [row["id"] for row in sites["result"]] == ["S-03", "S-04"]
     with pytest.raises(RuntimeError, match="site 'S-99' not found"):
         call_tool(mcp_url, "get_site", {"site_id": "S-99"})
+
+
+class CountingAuth(httpx.Auth):
+    """Stands in for SigV4: marks and counts every request it sees."""
+
+    def __init__(self):
+        self.count = 0
+
+    def auth_flow(self, request):
+        self.count += 1
+        request.headers["X-Signed"] = "yes"
+        yield request
+
+
+def test_auth(mcp_url):
+    """Every request goes through the auth, as SigV4 would sign it."""
+    auth = CountingAuth()
+    assert "get_site" in list_tools(mcp_url, auth=auth)
+    site = call_tool(mcp_url, "get_site", {"site_id": "S-03"}, auth=auth)
+    assert site["id"] == "S-03"
+    assert auth.count >= 4  # initialize and the call, for each session
 
 
 def test_main(mcp_url, capsys):

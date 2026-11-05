@@ -111,3 +111,17 @@ class OneBotoSesMixin:
         An IAM client from :attr:`boto_ses`.
         """
         return self.boto_ses.client("iam")
+
+    @cached_property
+    def bedrock_agentcore_client(self: One):  # pragma: no cover
+        """
+        An AgentCore data plane client from :attr:`boto_ses`: invokes runtimes.
+        """
+        return self.boto_ses.client("bedrock-agentcore")
+
+    @cached_property
+    def bedrock_agentcore_control_client(self: One):  # pragma: no cover
+        """
+        An AgentCore control plane client from :attr:`boto_ses`: lists runtimes.
+        """
+        return self.boto_ses.client("bedrock-agentcore-control")

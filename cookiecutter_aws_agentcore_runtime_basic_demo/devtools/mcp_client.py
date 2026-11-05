@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 
 """
-A small MCP client to call an MCP runtime by hand: list its tools, and call one
-with JSON arguments, over streamable HTTP. ``mise run ac-local-mcp-call`` uses
-it on a local server, started with ``ac-local-mcp`` or ``ac-dev-mcp``.
+A small MCP client to call an MCP runtime: list its tools, and call one with
+JSON arguments, over streamable HTTP. ``mise run ac-local-mcp-call`` uses it on
+a local server, started with ``ac-local-mcp`` or ``ac-dev-mcp``; with the SigV4
+auth of :func:`~cookiecutter_aws_agentcore_runtime_basic_demo.devtools.agentcore_client.get_deployed_mcp_connection`
+it calls a deployed MCP runtime.
 """
 
 from __future__ import annotations
@@ -12,7 +14,9 @@ import os
 import json
 import asyncio
 import argparse
+import contextlib
 
+import httpx
 from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 
@@ -31,38 +35,61 @@ on the default port, such as ``agentcore dev`` without ``--port``.
 """
 
 
-async def _list_tools(url: str) -> list[str]:
-    async with streamable_http_client(url) as (read, write, _):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
-            result = await session.list_tools()
-            return [tool.name for tool in result.tools]
+#: Seconds to wait to connect and send, and to read an answer (a tool may be slow).
+TIMEOUT = httpx.Timeout(30.0, read=300.0)
 
 
-async def _call_tool(url: str, name: str, arguments: dict):
-    async with streamable_http_client(url) as (read, write, _):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
-            return await session.call_tool(name, arguments)
+@contextlib.asynccontextmanager
+async def _open_session(url: str, auth: httpx.Auth | None):
+    async with httpx.AsyncClient(auth=auth, timeout=TIMEOUT) as http_client:
+        async with streamable_http_client(url, http_client=http_client) as (
+            read,
+            write,
+            _,
+        ):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                yield session
 
 
-def list_tools(url: str) -> list[str]:
+async def _list_tools(url: str, auth: httpx.Auth | None) -> list[str]:
+    async with _open_session(url, auth) as session:
+        result = await session.list_tools()
+        return [tool.name for tool in result.tools]
+
+
+async def _call_tool(url: str, name: str, arguments: dict, auth: httpx.Auth | None):
+    async with _open_session(url, auth) as session:
+        return await session.call_tool(name, arguments)
+
+
+def list_tools(url: str, auth: httpx.Auth | None = None) -> list[str]:
     """
     The names of the tools of the MCP server at ``url``, in the server's order.
+
+    :param auth: signs each request, such as the SigV4 auth of a deployed MCP
+        runtime; ``None`` for a local server.
     """
-    return asyncio.run(_list_tools(url))
+    return asyncio.run(_list_tools(url, auth))
 
 
-def call_tool(url: str, name: str, arguments: dict | None = None):
+def call_tool(
+    url: str,
+    name: str,
+    arguments: dict | None = None,
+    auth: httpx.Auth | None = None,
+):
     """
     Call the tool ``name`` of the MCP server at ``url``, and return its result
     as JSON data: the structured output (a list result is wrapped as
     ``{"result": [...]}``), else the JSON text.
 
+    :param auth: as for :func:`list_tools`.
+
     :raises RuntimeError: the tool failed; the message is the server's.
     """
     # raised here, not inside the client's task group, which would wrap it
-    result = asyncio.run(_call_tool(url, name, arguments or {}))
+    result = asyncio.run(_call_tool(url, name, arguments or {}, auth))
     if result.isError:
         raise RuntimeError(result.content[0].text)
     if result.structuredContent is not None:

@@ -311,6 +311,30 @@ echo "AWS_PROFILE={{env.AWS_PROFILE_FOR_DEV}} agentcore invoke --target dev --ru
 AWS_PROFILE={{env.AWS_PROFILE_FOR_DEV}} agentcore invoke --target dev --runtime SiteAgent --payload "$PAYLOAD" ${SESSION_ID:+--session-id $SESSION_ID}
 """
 
+[tasks."ac-logs-dev-power-plant-mcp"]
+description = "📜 Show the recent logs of the deployed PowerPlantMcp of dev; SINCE=2h looks further back (reads AWS)"
+env = { ENV_NAME = "dev" }
+depends = ["inst"]
+run = """
+echo '>>> ac-logs-dev-power-plant-mcp: Show the recent logs of the deployed PowerPlantMcp of dev; SINCE=2h looks further back (reads AWS)'
+.venv/bin/python .mise/tasks/ac-gen.py
+echo '--- Run command ---'
+echo 'AWS_PROFILE={{env.AWS_PROFILE_FOR_DEV}} agentcore logs runtime --name PowerPlantMcp --target dev --since ${SINCE:-30m}'
+AWS_PROFILE={{env.AWS_PROFILE_FOR_DEV}} agentcore logs runtime --name PowerPlantMcp --target dev --since ${SINCE:-30m}
+"""
+
+[tasks."ac-logs-dev-site-agent"]
+description = "📜 Show the recent logs of the deployed SiteAgent of dev; SINCE=2h looks further back (reads AWS)"
+env = { ENV_NAME = "dev" }
+depends = ["inst"]
+run = """
+echo '>>> ac-logs-dev-site-agent: Show the recent logs of the deployed SiteAgent of dev; SINCE=2h looks further back (reads AWS)'
+.venv/bin/python .mise/tasks/ac-gen.py
+echo '--- Run command ---'
+echo 'AWS_PROFILE={{env.AWS_PROFILE_FOR_DEV}} agentcore logs runtime --name SiteAgent --target dev --since ${SINCE:-30m}'
+AWS_PROFILE={{env.AWS_PROFILE_FOR_DEV}} agentcore logs runtime --name SiteAgent --target dev --since ${SINCE:-30m}
+"""
+
 [tasks."ac-chain-up-dev"]
 description = "🚀 Deploy everything AgentCore of dev: config-deploy-dev → cdk-up-dev-agentcore-deps-stack → ac-deploy-dev"
 run = [
@@ -677,6 +701,30 @@ echo "AWS_PROFILE={{env.AWS_PROFILE_FOR_TST}} agentcore invoke --target tst --ru
 AWS_PROFILE={{env.AWS_PROFILE_FOR_TST}} agentcore invoke --target tst --runtime SiteAgent --payload "$PAYLOAD" ${SESSION_ID:+--session-id $SESSION_ID}
 """
 
+[tasks."ac-logs-tst-power-plant-mcp"]
+description = "📜 Show the recent logs of the deployed PowerPlantMcp of tst; SINCE=2h looks further back (reads AWS)"
+env = { ENV_NAME = "tst" }
+depends = ["inst"]
+run = """
+echo '>>> ac-logs-tst-power-plant-mcp: Show the recent logs of the deployed PowerPlantMcp of tst; SINCE=2h looks further back (reads AWS)'
+.venv/bin/python .mise/tasks/ac-gen.py
+echo '--- Run command ---'
+echo 'AWS_PROFILE={{env.AWS_PROFILE_FOR_TST}} agentcore logs runtime --name PowerPlantMcp --target tst --since ${SINCE:-30m}'
+AWS_PROFILE={{env.AWS_PROFILE_FOR_TST}} agentcore logs runtime --name PowerPlantMcp --target tst --since ${SINCE:-30m}
+"""
+
+[tasks."ac-logs-tst-site-agent"]
+description = "📜 Show the recent logs of the deployed SiteAgent of tst; SINCE=2h looks further back (reads AWS)"
+env = { ENV_NAME = "tst" }
+depends = ["inst"]
+run = """
+echo '>>> ac-logs-tst-site-agent: Show the recent logs of the deployed SiteAgent of tst; SINCE=2h looks further back (reads AWS)'
+.venv/bin/python .mise/tasks/ac-gen.py
+echo '--- Run command ---'
+echo 'AWS_PROFILE={{env.AWS_PROFILE_FOR_TST}} agentcore logs runtime --name SiteAgent --target tst --since ${SINCE:-30m}'
+AWS_PROFILE={{env.AWS_PROFILE_FOR_TST}} agentcore logs runtime --name SiteAgent --target tst --since ${SINCE:-30m}
+"""
+
 [tasks."ac-chain-up-tst"]
 description = "🚀 Deploy everything AgentCore of tst: config-deploy-tst → cdk-up-tst-agentcore-deps-stack → ac-deploy-tst"
 run = [
@@ -1041,6 +1089,30 @@ PAYLOAD='{"prompt": "Can we send someone to inspect the turbines at site S-03 to
 echo '--- Run command ---'
 echo "AWS_PROFILE={{env.AWS_PROFILE_FOR_PRD}} agentcore invoke --target prd --runtime SiteAgent --payload '$PAYLOAD' ${SESSION_ID:+--session-id $SESSION_ID}"
 AWS_PROFILE={{env.AWS_PROFILE_FOR_PRD}} agentcore invoke --target prd --runtime SiteAgent --payload "$PAYLOAD" ${SESSION_ID:+--session-id $SESSION_ID}
+"""
+
+[tasks."ac-logs-prd-power-plant-mcp"]
+description = "📜 Show the recent logs of the deployed PowerPlantMcp of prd; SINCE=2h looks further back (reads AWS)"
+env = { ENV_NAME = "prd" }
+depends = ["inst"]
+run = """
+echo '>>> ac-logs-prd-power-plant-mcp: Show the recent logs of the deployed PowerPlantMcp of prd; SINCE=2h looks further back (reads AWS)'
+.venv/bin/python .mise/tasks/ac-gen.py
+echo '--- Run command ---'
+echo 'AWS_PROFILE={{env.AWS_PROFILE_FOR_PRD}} agentcore logs runtime --name PowerPlantMcp --target prd --since ${SINCE:-30m}'
+AWS_PROFILE={{env.AWS_PROFILE_FOR_PRD}} agentcore logs runtime --name PowerPlantMcp --target prd --since ${SINCE:-30m}
+"""
+
+[tasks."ac-logs-prd-site-agent"]
+description = "📜 Show the recent logs of the deployed SiteAgent of prd; SINCE=2h looks further back (reads AWS)"
+env = { ENV_NAME = "prd" }
+depends = ["inst"]
+run = """
+echo '>>> ac-logs-prd-site-agent: Show the recent logs of the deployed SiteAgent of prd; SINCE=2h looks further back (reads AWS)'
+.venv/bin/python .mise/tasks/ac-gen.py
+echo '--- Run command ---'
+echo 'AWS_PROFILE={{env.AWS_PROFILE_FOR_PRD}} agentcore logs runtime --name SiteAgent --target prd --since ${SINCE:-30m}'
+AWS_PROFILE={{env.AWS_PROFILE_FOR_PRD}} agentcore logs runtime --name SiteAgent --target prd --since ${SINCE:-30m}
 """
 
 [tasks."ac-chain-up-prd"]

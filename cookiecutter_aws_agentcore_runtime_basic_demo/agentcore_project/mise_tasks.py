@@ -9,8 +9,9 @@ Per environment ``<env>``:
 
 - Step tasks: ``config-deploy-<env>`` and ``config-delete-<env>`` (the config in
   SSM), ``ac-deploy-<env>`` and ``ac-down-<env>`` (the runtimes),
-  ``ac-status-<env>`` (what is deployed), and ``ac-invoke-<env>-<slug>`` per
-  runtime of the registry (its sample payload, sent to the deployed runtime).
+  ``ac-status-<env>`` (what is deployed), and per runtime of the registry
+  ``ac-invoke-<env>-<slug>`` (its sample payload, sent to the deployed runtime)
+  and ``ac-logs-<env>-<slug>`` (its recent logs).
 - Chains, which run step tasks in order and stop at the first that fails:
   ``ac-chain-up-<env>`` (config, the ``agentcore_deps`` stack, the runtimes),
   ``ac-chain-down-<env>`` (the reverse, after one yes/no question), and
@@ -57,6 +58,14 @@ Set it to pass ``--session-id`` to ``agentcore invoke``, such as
 ``SESSION_ID=<id> mise run ac-invoke-dev-<slug>``: the same ID continues the
 same runtime session.
 """
+
+SINCE_VAR = "SINCE"
+"""
+Set it to change how far back ``ac-logs-<env>-<slug>`` searches, such as
+``SINCE=2h``; the default is :data:`DEFAULT_SINCE`.
+"""
+
+DEFAULT_SINCE = "30m"
 
 DEPLOYED_STATE_REMINDER = (
     "echo 'Commit agentcore/.cli/deployed-state.json if it changed: "
@@ -248,6 +257,20 @@ def get_env_steps(
             ),
             script="\n".join([gen, *get_invoke_script(spec, target_name, env_name)]),
         )
+        logs_command = get_agentcore_command(
+            env_name,
+            f"logs runtime --name {spec.name} --target {target_name} "
+            f"--since ${{{SINCE_VAR}:-{DEFAULT_SINCE}}}",
+        )
+        steps[f"logs:{spec.slug}"] = EnvStep(
+            name=f"ac-logs-{env_name}-{spec.slug}",
+            emoji="📜",
+            summary=(
+                f"Show the recent logs of the deployed {spec.name} of {env_name}; "
+                f"{SINCE_VAR}=2h looks further back (reads AWS)"
+            ),
+            script="\n".join([gen, *_run_command(logs_command)]),
+        )
     return steps
 
 
@@ -335,7 +358,9 @@ def render_agentcore_env_tasks(
             "ac_status",
         ]
     ]
+    logs_steps = [step for key, step in steps.items() if key.startswith("logs:")]
     parts.extend(_render_step(step, env_name) for step in invoke_steps)
+    parts.extend(_render_step(step, env_name) for step in logs_steps)
     parts.append(
         _render_chain(
             name=f"ac-chain-up-{env_name}",

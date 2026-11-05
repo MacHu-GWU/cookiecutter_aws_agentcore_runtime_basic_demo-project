@@ -28,6 +28,7 @@ One reference per OP, numbered `<OP><part>`: `10` is OP-1, `30` and `31` would b
 - **Running the Package with `agentcore dev`** (`references/53-agentcore-dev.md`): Read before running a runtime with agentcore dev, or when an agentcore dev server starts on the wrong port or cannot load its config.
 - **Deploy** (`references/60-deploy.md`): Read before deploying, before giving a runtime a permission or a resource, after a deploy fails, or to check a deployed environment.
 - **Teardown** (`references/70-teardown.md`): Read before tearing down an environment or any of its AgentCore parts, or when a teardown fails half way.
+- **Invoke and Observe** (`references/80-invoke-and-observe.md`): Read before writing a client that calls a deployed runtime, when an invocation is slow or fails, or to read a runtime's logs.
 - **Operation-Oriented Design of an AgentCore Project** (`references/99-ood.md`): Read before refactoring an AgentCore module, before moving a file between OPs, or when deciding which OP a new piece of AgentCore work belongs to.
 
 <!-- END references index -->
@@ -45,7 +46,7 @@ The references are being rewritten one OP at a time, in OP order. Until an OP ha
 | OP-5 AgentCore runtime | `50-agentcore-project-layout.md`, `51-agentcore-config.md`, `52-agentcore-packaging.md`, `53-agentcore-dev.md` | none |
 | OP-6 Deploy | `60-deploy.md` | none |
 | OP-7 Teardown | `70-teardown.md` | none |
-| OP-8 Invoke and observe | not yet | `legacy/02-runtime-sessions-and-cold-starts.md`, `legacy/05-naming.md`, `legacy/11-deploy-and-troubleshoot.md` |
+| OP-8 Invoke and observe | `80-invoke-and-observe.md` | none |
 | OP-9 Maintain | not yet | `legacy/12-cli-upgrade.md` |
 
 ## Scripts
