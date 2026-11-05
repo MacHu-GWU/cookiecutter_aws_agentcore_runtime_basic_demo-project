@@ -23,7 +23,9 @@ Implements **OP-5**, layer 2. The project config is the source of truth (`20-cen
 | `name` | the runtime's name in `agentcore.json`, from `agentcore_runtime_name_<x>` of the config |
 | `module` | the runtime module relative to the package, such as `runtimes.<runtime_name>` (or `runtimes.<runtime_name>.main`) |
 | `protocol` | `RuntimeProtocolEnum.MCP` (an MCP server: port 8000, `/mcp`) or `RuntimeProtocolEnum.HTTP` (an agent: port 8080, `/invocations`, `/ping`) |
-| `sample_payload` | what the generated `ac-invoke-<env>-<slug>` task sends to the deployed runtime: `{"prompt": ...}` for an agent, a whole JSON-RPC request for an MCP server |
+| `sample_payload` | what the generated call tasks send, `ac-local-<slug>-call` locally and `ac-invoke-<env>-<slug>` deployed: `{"prompt": ...}` for an agent, a whole JSON-RPC `tools/call` request for an MCP server |
+| `local_port` | its port on a developer machine, unique (18731, 18732, ...): `ac-local-<slug>` and `ac-dev-<slug>` listen there |
+| `mcp_runtimes` | for an agent: the MCP runtimes it calls; each needs its `bind()` line in `cdk-stack.ts`, and the local tasks point the agent at their local ports |
 | `slug` (derived) | the name in task names, kebab case: `MyMcp` → `my-mcp` |
 
 `RUNTIME_PYTHON` (`3.12`, the dev Python of `mise.toml`) and `RUNTIME_VERSION` (`PYTHON_3_12`, its name in `agentcore.json`) apply to every runtime.
@@ -112,6 +114,6 @@ ENV_NAME=tst mise run ac-gen
 ## 7. Registering a runtime
 
 1. Its names in the config (`20-centralized-config.md`, section 5) and its runtime module (`30-mcp-runtime.md` or `40-agent-runtime.md`).
-2. A `RuntimeSpec` line in `get_runtime_specs()`, with a sample payload; update `test_get_runtime_specs`.
+2. A `RuntimeSpec` entry in `get_runtime_specs()`, with a sample payload, the next free local port, and for an agent its `mcp_runtimes`; update `test_get_runtime_specs`.
 3. For an agent that uses it: a `bind()` line in `cdk-stack.ts` (`50-agentcore-project-layout.md`, section 4).
 4. `mise run ac-gen`, then check the packaging (layer 3), then `mise run gen-env-tasks` for its generated tasks.

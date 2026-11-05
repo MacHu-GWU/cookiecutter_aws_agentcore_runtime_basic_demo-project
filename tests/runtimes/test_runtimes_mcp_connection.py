@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
 from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.mcp_connection import (
+    get_local_mcp_url_env_var,
+)
+from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.mcp_connection import (
     get_runtime_arn_env_var,
 )
 from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.mcp_connection import (
@@ -23,6 +26,7 @@ RUNTIME_ARN = (
     "arn:aws:bedrock-agentcore:us-west-2:111122223333:runtime/MyProject_dev_MyMcp-abc"
 )
 ARN_VAR = "AGENTCORE_RUNTIME_MYMCP_ARN"
+URL_VAR = "MCP_URL_MYMCP"
 
 
 def fake_session() -> boto3.Session:
@@ -33,9 +37,11 @@ def fake_session() -> boto3.Session:
     )
 
 
-def test_get_runtime_arn_env_var():
+def test_env_var_names():
     # the name bind() sets, a contract with the AgentCore CLI
     assert get_runtime_arn_env_var("MyMcp") == ARN_VAR
+    # the name the local tasks set
+    assert get_local_mcp_url_env_var("MyMcp") == URL_VAR
 
 
 def test_get_runtime_mcp_url():
@@ -60,20 +66,25 @@ def test_aws_sigv4_auth():
 
 
 def test_get_mcp_connection(monkeypatch):
-    monkeypatch.delenv("MCP_URL", raising=False)
+    monkeypatch.delenv(URL_VAR, raising=False)
     monkeypatch.delenv(ARN_VAR, raising=False)
     session = fake_session()
     # nothing set: the default
-    assert get_mcp_connection(ARN_VAR, session) == ("http://localhost:8000/mcp", None)
+    assert get_mcp_connection("MyMcp", session) == ("http://localhost:8000/mcp", None)
     # deployed: the runtime's URL, signed in the ARN's region
     monkeypatch.setenv(ARN_VAR, RUNTIME_ARN)
-    url, auth = get_mcp_connection(ARN_VAR, session)
+    url, auth = get_mcp_connection("MyMcp", session)
     assert url == get_runtime_mcp_url(RUNTIME_ARN)
     assert isinstance(auth, AwsSigV4Auth)
     assert auth.region == "us-west-2"
     # a local URL wins
-    monkeypatch.setenv("MCP_URL", "http://localhost:18731/mcp")
-    assert get_mcp_connection(ARN_VAR, session) == ("http://localhost:18731/mcp", None)
+    monkeypatch.setenv(URL_VAR, "http://localhost:18731/mcp")
+    assert get_mcp_connection("MyMcp", session) == ("http://localhost:18731/mcp", None)
+    # another MCP runtime's variables do not count
+    assert get_mcp_connection("OtherMcp", session) == (
+        "http://localhost:8000/mcp",
+        None,
+    )
 
 
 if __name__ == "__main__":

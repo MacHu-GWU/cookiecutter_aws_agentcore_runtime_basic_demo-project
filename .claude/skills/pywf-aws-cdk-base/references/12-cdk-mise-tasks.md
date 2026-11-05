@@ -40,6 +40,9 @@ This project adds, per environment, in the same block, rendered by `<package_nam
 | `ac-status-<env>` | `agentcore status --target <env>` | reads |
 | `ac-invoke-<env>-<slug>` | `agentcore invoke` of one deployed runtime with its sample payload | calls the runtime |
 | `ac-test-<env>` | `ac-status-<env>`, then every `ac-invoke-<env>-<slug>` | calls the runtimes |
+| `ac-logs-<env>-<slug>` | `agentcore logs runtime` of one runtime | reads |
+
+After the environments, the same module adds per runtime, for a developer machine: `ac-local-<slug>`, `ac-dev-<slug>`, `ac-local-<slug>-call` (no AWS change).
 
 Every generated task first prints `>>> <task>: <what it does>`. A destructive task that is not a `cdk-*` one (`ac-down-<env>`, `config-delete-<env>`, `ac-chain-down-<env>`) then asks yes or no through `<pkg>/confirm.py` (only `y` or `yes` goes on; `CONFIRM_YES=true` skips it; a chain sets `CONFIRMED_BY_CHAIN=true` so its steps do not ask again); never mise's `confirm`, which takes a bare Enter as yes; a chain task first prints its whole chain, then runs its steps with `{ task = ... }` entries, which stop at the first failure.
 

@@ -13,6 +13,7 @@ from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.registry im
 import importlib
 
 from cookiecutter_aws_agentcore_runtime_basic_demo.paths import PACKAGE_NAME
+from cookiecutter_aws_agentcore_runtime_basic_demo.paths import path_enum
 from cookiecutter_aws_agentcore_runtime_basic_demo.config.api import Config
 
 
@@ -48,6 +49,29 @@ def test_every_runtime_module_has_its_entry_points(config: Config):
         assert callable(module.main)
         if spec.protocol == RuntimeProtocolEnum.HTTP:
             assert module.app is not None
+
+
+def test_local_ports_and_mcp_runtimes(config: Config):
+    """
+    Every runtime has its own local port, below the ephemeral range; an agent
+    calls only MCP runtimes of the registry, each bound to it in cdk-stack.ts.
+    """
+    specs = get_runtime_specs(config)
+    ports = [spec.local_port for spec in specs]
+    assert len(set(ports)) == len(ports)
+    assert all(1024 <= port < 32768 for port in ports)
+    protocols = {spec.name: spec.protocol for spec in specs}
+    content = path_enum.path_agentcore_cdk_stack_ts.read_text(encoding="utf-8")
+    for spec in specs:
+        if spec.protocol == RuntimeProtocolEnum.MCP:
+            assert spec.mcp_runtimes == []
+        for mcp_name in spec.mcp_runtimes:
+            assert protocols[mcp_name] == RuntimeProtocolEnum.MCP
+            line = (
+                f"this.application.runtime('{mcp_name}')"
+                f".bind(this.application.runtime('{spec.name}'));"
+            )
+            assert line in content
 
 
 if __name__ == "__main__":

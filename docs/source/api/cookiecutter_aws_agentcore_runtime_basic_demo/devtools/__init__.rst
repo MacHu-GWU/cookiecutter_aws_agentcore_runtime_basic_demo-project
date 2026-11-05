@@ -13,5 +13,6 @@ sub packages and modules
     agent_client <agent_client>
     agentcore_client <agentcore_client>
     local_port <local_port>
+    local_run <local_run>
     mcp_client <mcp_client>
     

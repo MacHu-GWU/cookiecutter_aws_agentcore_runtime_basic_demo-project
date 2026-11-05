@@ -43,8 +43,8 @@ def test_make_agent(mcp_url):
 
 
 def test_build_agent(mcp_url, monkeypatch):
-    """With the dependencies of the process: here the local MCP server of MCP_URL."""
-    monkeypatch.setenv("MCP_URL", mcp_url)
+    """With the dependencies of the process: here the local MCP server of MCP_URL_POWERPLANTMCP."""
+    monkeypatch.setenv("MCP_URL_POWERPLANTMCP", mcp_url)
     agent = build_agent()
     try:
         assert sorted(agent.tool_names) == TOOL_NAMES

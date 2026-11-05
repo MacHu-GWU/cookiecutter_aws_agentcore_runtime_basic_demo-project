@@ -9,7 +9,7 @@ Implements **OP-3**. Packaging and deploying it are later OPs; this file stops a
 | | |
 | :--- | :--- |
 | EP | `<package_name>/runtimes/<runtime_name>.py`, or `<package_name>/runtimes/<runtime_name>/main.py` |
-| FP | layer 1: `<package_name>/<domain>/**`, `tests/<domain>/**`; layer 2: the runtime module, `<package_name>/runtimes/common.py`, the dependency's `one` mixin, `tests/runtimes/**`; layer 3: `<package_name>/devtools/**`, `.mise/tasks/{free-port,ac-local-mcp-call}.py`, the `ac-local-*` tasks and ports of `mise.toml`, `tests/devtools/**` |
+| FP | layer 1: `<package_name>/<domain>/**`, `tests/<domain>/**`; layer 2: the runtime module, `<package_name>/runtimes/common.py`, the dependency's `one` mixin, `tests/runtimes/**`; layer 3: `<package_name>/devtools/**`, `.mise/tasks/{free-port,ac-run}.py`, the generated `ac-local-<slug>*` tasks, `tests/devtools/**` |
 | CMD | per layer, in each section; all: `mise run cov` |
 
 ---
@@ -125,36 +125,45 @@ def main():
 
 ## 4. Layer 3: run and call it locally
 
-**Run:** one task per MCP runtime (in the seed repo, `ac-local-mcp`):
+Every runtime has, from its entry in the runtime registry (`<package_name>/agentcore_project/registry.py`), a local port and a sample payload, and three generated tasks, named after its slug (`MyMcp` → `my-mcp`). All three run `.venv/bin/python .mise/tasks/ac-run.py --runtime <Runtime> --mode <mode>`, which is `<package_name>/devtools/local_run.py`: no per-runtime command is written by hand.
+
+**Run:**
 
 ```bash
-mise run ac-local-mcp
+mise run ac-local-<slug>
 ```
 
-It frees the runtime's local port, then runs `FASTMCP_PORT=$LOCAL_<NAME>_PORT .venv/bin/python -m <package_name>.runtimes.<runtime_name>`: the package from the repo, runtime `local`, config from the files, no AWS needed unless a tool calls AWS.
+It frees the runtime's local port, then runs `FASTMCP_PORT=<port> .venv/bin/python -m <package_name>.runtimes.<runtime_name>` (printing both first): the package from the repo, runtime `local`, config from the files, no AWS needed unless a tool calls AWS.
 
-**Ports:** each runtime has its own unusual local port in `mise.toml` `[env]` (`LOCAL_MCP_PORT=18731`, the next runtime the next number), below the ephemeral range (32768+), so a listener there is almost surely a leftover server of this repo, and no outgoing connection takes it by chance. Deployed runtimes always listen on AgentCore's 8000; no deploy code knows the local ports.
+**Ports:** each runtime has its own unusual local port in the registry (18731, then the next number), below the ephemeral range (32768+), so a listener there is almost surely a leftover server of this repo, and no outgoing connection takes it by chance. A test checks they are unique. Deployed runtimes always listen on AgentCore's 8000; no deploy code knows the local ports.
 
-**`free-port`** (`<package_name>/devtools/local_port.py`, also `mise run free-port --port <port>`): every server task runs it first.
+**`free-port`** (`<package_name>/devtools/local_port.py`, also `mise run free-port --port <port>`): the run tasks call it first.
 
 - A listener counts as this repo's when its working directory is inside the repo root.
 - If any listener is not this repo's (another clone or worktree included), nothing is stopped: it prints each pid and command line and exits 1.
 - Otherwise `SIGTERM`, a 5 s wait, then `SIGKILL` for what still listens. The terminal whose server was stopped prints `ERROR task failed`: expected.
 - It uses `lsof`, which sees only the current user's processes.
 
-**Call:** one task per MCP runtime with a sample call (in the seed repo, `ac-local-mcp-call`):
+**Call:**
 
 ```bash
-mise run ac-local-mcp-call
+mise run ac-local-<slug>-call
 ```
 
-It runs `<package_name>/devtools/mcp_client.py` (through the thin `.mise/tasks/ac-local-mcp-call.py`) with `--url http://localhost:$LOCAL_<NAME>_PORT/mcp --tool <name> --arguments '<json>'`: it prints the tool names, then the tool's result as JSON, or the tool error (exit 1). As a library: `list_tools(url)`, `call_tool(url, name, arguments)`.
+It sends the runtime's sample payload (a JSON-RPC `tools/call` request: the tool and its arguments) through `<package_name>/devtools/mcp_client.py` to `http://localhost:<port>/mcp`: it prints the tool names, then the tool's result as JSON, or the tool error (exit 1). Another tool by hand:
 
-**Tests and CMD:** `tests/devtools/test_devtools_mcp_client.py` runs the client against the real server, served on a free port by the session fixture `mcp_url` of `tests/conftest.py`; `tests/devtools/test_devtools_local_port.py` starts and stops real listeners.
+```bash
+.venv/bin/python -c "from <package_name>.devtools.mcp_client import main; main()" --url http://localhost:<port>/mcp --tool <name> --arguments '<json>'
+```
+
+As a library: `list_tools(url)`, `call_tool(url, name, arguments)`; both take an `auth`, used to call a deployed runtime.
+
+**Tests and CMD:** `tests/devtools/test_devtools_mcp_client.py` runs the client against the real server, served on a free port by the session fixture `mcp_url` of `tests/conftest.py`; `tests/devtools/test_devtools_local_port.py` starts and stops real listeners; `tests/devtools/test_devtools_local_run.py` checks every command and environment `local_run` builds.
 
 ```bash
 .venv/bin/python tests/devtools/test_devtools_mcp_client.py
 .venv/bin/python tests/devtools/test_devtools_local_port.py
+.venv/bin/python tests/devtools/test_devtools_local_run.py
 ```
 
 `<package_name>/devtools/` is dev-machine tooling: never copied into a runtime zip.
@@ -166,7 +175,7 @@ It runs `<package_name>/devtools/mcp_client.py` (through the thin `.mise/tasks/a
 1. Layer 1: the business functions and result models in `<package_name>/<domain>/`, with their tests.
 2. A dependency the tools need: a `one` property in its own `one/one_0N_<topic>.py`, with its test; its connection settings in the config.
 3. Layer 2: `<package_name>/runtimes/<runtime_name>.py` as in section 3, and `tests/runtimes/test_runtimes_<runtime_name>.py`.
-4. Layer 3: a port `LOCAL_<NAME>_PORT` in `mise.toml` `[env]` (the next free number), a run task and a call task like `ac-local-mcp` / `ac-local-mcp-call`, with the new module, port, and a sample tool call.
+4. Layer 3: an entry in the runtime registry with the next free local port and a sample `tools/call` payload, then `mise run gen-env-tasks` for its `ac-local-<slug>` tasks.
 5. `mise run cov`, then run and call it.
 
 Its names in the config are OP-2 (`20-centralized-config.md`, section 5); packaging and deploying it are later OPs.

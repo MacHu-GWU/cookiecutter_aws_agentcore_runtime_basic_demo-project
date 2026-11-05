@@ -17,7 +17,10 @@ Per environment ``<env>``:
   ``ac-chain-down-<env>`` (the reverse, after one yes/no question), and
   ``ac-test-<env>`` (status, then every runtime invoked once).
 
-Then ``config-deploy-all`` and ``config-delete-all``. Nothing here calls AWS.
+Then ``config-deploy-all`` and ``config-delete-all``, and per runtime, for a
+developer machine: ``ac-local-<slug>``, ``ac-dev-<slug>``, and
+``ac-local-<slug>-call`` (:mod:`~cookiecutter_aws_agentcore_runtime_basic_demo.devtools.local_run`).
+Nothing here calls AWS.
 """
 
 from __future__ import annotations
@@ -408,6 +411,53 @@ def render_config_all_tasks(env_names: list[str]) -> list[str]:
     return parts
 
 
+def render_runtime_tasks(runtime_specs: list[RuntimeSpec]) -> list[str]:
+    """
+    The tasks of each runtime on a developer machine, all through
+    ``.mise/tasks/ac-run.py``: run it from the repo, run it packaged under
+    ``agentcore dev``, and call it on its local port.
+    """
+    parts = []
+    for spec in runtime_specs:
+        command = f".venv/bin/python .mise/tasks/ac-run.py --runtime {spec.name}"
+        kind = "MCP server" if spec.protocol == RuntimeProtocolEnum.MCP else "agent"
+        needs = ""
+        if spec.mcp_runtimes:
+            needs = "; start its MCP runtimes first: " + ", ".join(spec.mcp_runtimes)
+        tasks = [
+            (
+                f"ac-local-{spec.slug}",
+                f"🔌 Run the {spec.name} {kind} from the repo on port {spec.local_port} (Ctrl+C to stop){needs}",
+                "local",
+                "inst",
+            ),
+            (
+                f"ac-dev-{spec.slug}",
+                f"🏗️ Run the packaged {spec.name} with agentcore dev on port {spec.local_port}, config from SSM of ENV_NAME (run config-deploy-<env> first){needs}",
+                "dev",
+                "ac-gen",
+            ),
+            (
+                f"ac-local-{spec.slug}-call",
+                f"📞 Call the local {spec.name} on port {spec.local_port} with its sample payload (start it with ac-local-{spec.slug} or ac-dev-{spec.slug})",
+                "call",
+                "inst",
+            ),
+        ]
+        for name, description, mode, depends in tasks:
+            parts.append(
+                "\n".join(
+                    [
+                        f'[tasks."{name}"]',
+                        f'description = "{description}"',
+                        f'run = "{command} --mode {mode}"',
+                        f'depends = ["{depends}"]',
+                    ]
+                )
+            )
+    return parts
+
+
 def render_project_env_tasks() -> str:
     """
     The whole ``<env-tasks>`` block of this project: for every environment, its
@@ -428,5 +478,10 @@ def render_project_env_tasks() -> str:
             env_name: get_stack_targets(env_name) for env_name in env_names
         },
         env_extra_tasks=env_extra_tasks,
-        tail_tasks=render_config_all_tasks(env_names),
+        tail_tasks=[
+            *render_config_all_tasks(env_names),
+            *render_runtime_tasks(
+                get_runtime_specs(Config.load_from_local_config_file(env_names[0]))
+            ),
+        ],
     )

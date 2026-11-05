@@ -129,12 +129,34 @@ def test_ac_down_restores_the_project():
     assert lines[deploy].endswith("agentcore deploy --target dev --yes")
 
 
+def test_runtime_tasks():
+    """
+    Each runtime gets its local tasks, all through ac-run.py; the packaged one
+    generates the project first.
+    """
+    tasks = load_tasks()
+    for slug, name in [
+        ("power-plant-mcp", "PowerPlantMcp"),
+        ("site-agent", "SiteAgent"),
+    ]:
+        command = f".venv/bin/python .mise/tasks/ac-run.py --runtime {name}"
+        assert tasks[f"ac-local-{slug}"]["run"] == f"{command} --mode local"
+        assert tasks[f"ac-dev-{slug}"]["run"] == f"{command} --mode dev"
+        assert tasks[f"ac-dev-{slug}"]["depends"] == ["ac-gen"]
+        assert tasks[f"ac-local-{slug}-call"]["run"] == f"{command} --mode call"
+    assert (
+        "start its MCP runtimes first: PowerPlantMcp"
+        in (tasks["ac-local-site-agent"]["description"])
+    )
+
+
 def test_get_invoke_script():
     spec = RuntimeSpec(
         name="MyMcp",
         module="runtimes.my_mcp",
         protocol=RuntimeProtocolEnum.MCP,
         sample_payload={"jsonrpc": "2.0", "id": 1, "method": "tools/list"},
+        local_port=18799,
     )
     lines = get_invoke_script(spec, "dev", "dev")
     assert lines[0] == 'PAYLOAD=\'{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}\''

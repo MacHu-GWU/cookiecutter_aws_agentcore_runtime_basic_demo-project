@@ -43,7 +43,9 @@ class RuntimeSpec:
     name: str = dataclasses.field()  #: Name in ``agentcore.json``, from ``agentcore_runtime_name_*`` of the config.
     module: str = dataclasses.field()  #: The runtime module, relative to the package, such as ``runtimes.my_mcp``: it has a ``main()``, and an ``app`` for ``HTTP``.
     protocol: RuntimeProtocolEnum = dataclasses.field()  #: How AgentCore talks to it.
-    sample_payload: dict = dataclasses.field()  #: What ``ac-invoke-<env>-<slug>`` sends to the deployed runtime: ``{"prompt": ...}`` for an agent, a whole JSON-RPC request for an MCP server.
+    sample_payload: dict = dataclasses.field()  #: What the call tasks send: ``{"prompt": ...}`` for an agent, a whole JSON-RPC ``tools/call`` request for an MCP server.
+    local_port: int = dataclasses.field()  #: Its port on a developer machine, unique in the project: the ``ac-local-*`` and ``ac-dev-*`` servers listen there.
+    mcp_runtimes: list[str] = dataclasses.field(default_factory=list)  #: For an agent: the names of the MCP runtimes it calls, each bound in ``cdk-stack.ts``.
     # fmt: on
 
     @property
@@ -57,7 +59,9 @@ class RuntimeSpec:
 def get_runtime_specs(config: Config) -> list[RuntimeSpec]:
     """
     Every runtime of the project. To add one: its names in the config, its
-    runtime module, and a line here.
+    runtime module, and an entry here; then ``mise run gen-env-tasks`` writes
+    its tasks. Local ports are unusual on purpose (18731, 18732, ...), so a
+    listener there is almost surely a leftover server of this project.
     """
     return [
         RuntimeSpec(
@@ -70,6 +74,7 @@ def get_runtime_specs(config: Config) -> list[RuntimeSpec]:
                 "method": "tools/call",
                 "params": {"name": "get_site", "arguments": {"site_id": "S-03"}},
             },
+            local_port=18731,
         ),
         RuntimeSpec(
             name=config.agentcore_runtime_name_site_agent,
@@ -81,5 +86,7 @@ def get_runtime_specs(config: Config) -> list[RuntimeSpec]:
                     "tomorrow? Who is assigned there?"
                 ),
             },
+            local_port=18732,
+            mcp_runtimes=[config.agentcore_runtime_name_power_plant_mcp],
         ),
     ]

@@ -2,8 +2,8 @@
 
 """
 A small MCP client to call an MCP runtime: list its tools, and call one with
-JSON arguments, over streamable HTTP. ``mise run ac-local-mcp-call`` uses it on
-a local server, started with ``ac-local-mcp`` or ``ac-dev-mcp``; with the SigV4
+JSON arguments, over streamable HTTP. ``mise run ac-local-<slug>-call`` uses it on
+a local MCP server, started with ``ac-local-<slug>`` or ``ac-dev-<slug>``; with the SigV4
 auth of :func:`~cookiecutter_aws_agentcore_runtime_basic_demo.devtools.agentcore_client.get_deployed_mcp_connection`
 it calls a deployed MCP runtime.
 """
@@ -24,8 +24,8 @@ from ..runtimes.common import LOCAL_MCP_URL
 
 MCP_URL_VAR = "MCP_URL"
 """
-The URL of the MCP server to call when ``--url`` is not given; the mise tasks
-set it to the local port of the server.
+The URL of the MCP server this client calls when ``--url`` is not given, such
+as ``MCP_URL=http://localhost:18731/mcp``.
 """
 
 DEFAULT_MCP_URL = LOCAL_MCP_URL

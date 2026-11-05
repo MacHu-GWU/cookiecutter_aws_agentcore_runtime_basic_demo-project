@@ -8,9 +8,9 @@ Implements **OP-5**, layer 4.
 
 | | |
 | :--- | :--- |
-| EP | the `ac-dev-*` tasks of `mise.toml` |
-| FP | the `ac-dev-*` tasks and their comment in `mise.toml`, `app/<Runtime>/.venv` (made by the CLI) |
-| CMD | `mise run ac-dev-mcp`, `mise run ac-dev-agent`; call them with the `-call` tasks of `30-mcp-runtime.md` and `40-agent-runtime.md` |
+| EP | `get_dev_command` of `<package_name>/devtools/local_run.py`, run by the generated `ac-dev-<slug>` |
+| FP | `<package_name>/devtools/local_run.py`, the `local_port` and `mcp_runtimes` of the registry, `app/<Runtime>/.venv` (made by the CLI) |
+| CMD | `mise run ac-dev-<slug>`; call it with `mise run ac-local-<slug>-call` |
 
 ---
 
@@ -27,14 +27,10 @@ Implements **OP-5**, layer 4.
 Both use the same local ports, so a packaged MCP server works with a repo agent and the other way round, and the same `-call` tasks reach either.
 
 ```bash
-mise run ac-dev-mcp
+mise run ac-dev-<slug>
 ```
 
-```bash
-mise run ac-dev-agent
-```
-
-Each frees its port, runs `ac-gen` first (through `depends`), then `agentcore dev --agent <Runtime> --no-traces --port $LOCAL_<NAME>_PORT`.
+It runs `ac-gen` first (through `depends`), frees the runtime's local port, then `AWS_REGION=<region of the config> agentcore dev --agent <Runtime> --no-traces --port <port>` (`.mise/tasks/ac-run.py --mode dev`). Start an agent's MCP runtimes first, with `ac-dev-<slug>` or `ac-local-<slug>`.
 
 ---
 
@@ -42,8 +38,8 @@ Each frees its port, runs `ac-gen` first (through `depends`), then `agentcore de
 
 - **The runtime signals and the config location**: `agentcore dev` applies `envVars` of `agentcore.json` (`51-agentcore-config.md`), then `agentcore/.env.local` if present (git-ignored; not needed here), and sets `LOCAL_DEV=1`, `PORT`, and for an MCP runtime `FASTMCP_PORT`. So the code sees `agentcore_local`.
 - **The shell's environment**: `agentcore dev` passes it on, so the values mise loads from `.env` (`ENV_NAME`, `AWS_PROFILE_FOR_<ENV>`) reach the server, and `one.bsm` / `one.new_boto_ses()` use the environment's local profile.
-- **The region**: on `agentcore_local` the session takes it from `AWS_REGION`, because the config is read through that session; the `ac-dev-*` tasks set it.
-- **The agent's MCP server**: `MCP_URL` pointing at the local MCP port, as for `ac-local-agent`.
+- **The region**: on `agentcore_local` the session takes it from `AWS_REGION`, because the config is read through that session; the task sets it to the config's region of `ENV_NAME`.
+- **The agent's MCP servers**: one `MCP_URL_<NAME>` per MCP runtime it calls, pointing at that runtime's local port, as for `ac-local-<slug>` (`40-agent-runtime.md`, section 5).
 
 ---
 
@@ -51,12 +47,12 @@ Each frees its port, runs `ac-gen` first (through `depends`), then `agentcore de
 
 | Behavior | Consequence |
 | :--- | :--- |
-| Without `--port`, when the default port is taken, the CLI silently moves to the next free one (8001, 8002, ...) | callers reach the old server: the tasks always pass `--port` |
+| Without `--port`, when the default port is taken, the CLI silently moves to the next free one (8001, 8002, ...) | callers reach the old server: `local_run` always passes `--port` |
 | It sets `LOCAL_DEV=1` on the server | how the code tells `agentcore_local` from `agentcore` (`10-code-runtime.md`) |
 | An MCP runtime runs as `python main.py`; an `HTTP` runtime as `uvicorn main:app --reload` | the shim exposes `app` (`52-agentcore-packaging.md`); `main()` is not called, so an agent loads its config on the first request; the server reloads when `ac-gen` rewrites the copy |
 | Stopping the uvicorn process ends `agentcore dev` too | it does not respawn it |
 | `--no-traces` | no local OpenTelemetry collection |
-| `agentcore invoke --local` | needs `--port $LOCAL_<NAME>_PORT` to reach these servers; the `-call` tasks are simpler |
+| `agentcore invoke --local` | needs `--port <local port>` to reach these servers; the `-call` tasks are simpler |
 
 Each was read from the CLI's source (1.0.1), not the docs: check them again after a CLI upgrade.
 

@@ -31,7 +31,6 @@ from ..power_plant.site_agent import TOOLS
 from .common import ProcessAgent
 from .common import strip_thinking
 from .common import print_config_source
-from .mcp_connection import get_runtime_arn_env_var
 from .mcp_connection import get_mcp_connection
 
 if T.TYPE_CHECKING:  # pragma: no cover
@@ -68,11 +67,8 @@ def build_agent() -> Agent:
     invocation), and the ``PowerPlantMcp`` connection.
     """
     boto_session = one.new_boto_ses()
-    arn_env_var = get_runtime_arn_env_var(
-        one.config.agentcore_runtime_name_power_plant_mcp
-    )
     mcp_url, mcp_auth = get_mcp_connection(
-        arn_env_var=arn_env_var,
+        runtime_name=one.config.agentcore_runtime_name_power_plant_mcp,
         boto_session=boto_session,
     )
     return make_agent(

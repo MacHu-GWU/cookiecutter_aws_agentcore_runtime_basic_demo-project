@@ -9,7 +9,7 @@ Implements **OP-4**. It builds on the MCP runtime of `30-mcp-runtime.md`; packag
 | | |
 | :--- | :--- |
 | EP | `<package_name>/runtimes/<runtime_name>.py`, or `<package_name>/runtimes/<runtime_name>/main.py` |
-| FP | layer 1: `<package_name>/<domain>/<agent_name>.py` and the tool functions it lists, `tests/<domain>/**`; layer 2: the runtime module, `<package_name>/runtimes/common.py`, `<package_name>/runtimes/mcp_connection.py`, `one.new_boto_ses` in `<package_name>/one/one_02_boto_ses.py`, `tests/runtimes/**`; layer 3: `<package_name>/devtools/agent_client.py`, `.mise/tasks/ac-local-agent-call.py`, the `ac-local-agent*` tasks and ports of `mise.toml`, `tests/devtools/**`, the fixtures of `tests/conftest.py` |
+| FP | layer 1: `<package_name>/<domain>/<agent_name>.py` and the tool functions it lists, `tests/<domain>/**`; layer 2: the runtime module, `<package_name>/runtimes/common.py`, `<package_name>/runtimes/mcp_connection.py`, `one.new_boto_ses` in `<package_name>/one/one_02_boto_ses.py`, `tests/runtimes/**`; layer 3: `<package_name>/devtools/{agent_client,local_run}.py`, the generated `ac-local-<slug>*` tasks, `tests/devtools/**`, the fixtures of `tests/conftest.py` |
 | CMD | per layer, in each section; all: `mise run cov` |
 
 ---
@@ -65,8 +65,7 @@ def make_agent(model_id, boto_session, mcp_url, mcp_auth=None) -> Agent:
 
 def build_agent() -> Agent:
     boto_session = one.new_boto_ses()
-    arn_env_var = get_runtime_arn_env_var(one.config.agentcore_runtime_name_<mcp>)
-    mcp_url, mcp_auth = get_mcp_connection(arn_env_var=arn_env_var, boto_session=boto_session)
+    mcp_url, mcp_auth = get_mcp_connection(one.config.agentcore_runtime_name_<mcp>, boto_session)
     return make_agent(one.config.<agent>_model_id, boto_session, mcp_url, mcp_auth)
 
 
@@ -103,7 +102,7 @@ def main():
 
 **`main()`** prints the config source (a runtime that cannot load its config fails at startup), then `app.run()`. `agentcore dev` serves `app` with uvicorn instead of calling `main()`, so there the config loads on the first request.
 
-**Tests and CMD:** `tests/runtimes/test_runtimes_<runtime_name>.py`: the ARN variable name of each MCP runtime; `make_agent` loads the own tools and the MCP tools from the real local MCP server (fixture `mcp_url`), without a model call; `build_agent` with `MCP_URL` set; `invoke` with a fake agent; `main()`. `test_runtimes_common.py` covers `ProcessAgent` (built once, reused, dropped after a failure) and `strip_thinking`.
+**Tests and CMD:** `tests/runtimes/test_runtimes_<runtime_name>.py`: the ARN variable name of each MCP runtime; `make_agent` loads the own tools and the MCP tools from the real local MCP server (fixture `mcp_url`), without a model call; `build_agent` with `MCP_URL_<MCP NAME>` set; `invoke` with a fake agent; `main()`. `test_runtimes_common.py` covers `ProcessAgent` (built once, reused, dropped after a failure) and `strip_thinking`.
 
 ```bash
 .venv/bin/python tests/runtimes/test_runtimes_<runtime_name>.py
@@ -125,15 +124,15 @@ this.application.runtime('<Mcp>').bind(this.application.runtime('<Agent>'));
 
 It grants the agent's execution role `bedrock-agentcore:InvokeAgentRuntime` on the MCP runtime, and sets the agent's environment variable `AGENTCORE_RUNTIME_<MCP NAME IN UPPER CASE>_ARN` to its ARN: `get_runtime_arn_env_var(<Mcp>)`. That name is undocumented AgentCore CLI behavior; a test pins it.
 
-**`get_mcp_connection(arn_env_var, boto_session)`** returns `(url, auth)`:
+**`get_mcp_connection(runtime_name, boto_session)`** returns `(url, auth)` for the MCP runtime of that name:
 
 | # | When | URL | Auth |
 | :--- | :--- | :--- | :--- |
-| 1 | `MCP_URL` is set: the local tasks point the agent at a local MCP server | `MCP_URL` | none |
-| 2 | the ARN variable is set: deployed | `get_runtime_mcp_url(arn)` | `AwsSigV4Auth` |
+| 1 | `MCP_URL_<NAME>` (`get_local_mcp_url_env_var`) is set: the local tasks point the agent at a local server of that MCP runtime | its value | none |
+| 2 | `AGENTCORE_RUNTIME_<NAME>_ARN` is set: deployed | `get_runtime_mcp_url(arn)` | `AwsSigV4Auth` |
 | 3 | otherwise | `LOCAL_MCP_URL`, `http://localhost:8000/mcp` | none |
 
-An agent with several MCP servers calls it once per server, each with its own ARN variable and its own URL variable (`url_env_var`).
+Each MCP runtime has its own two variables, so an agent with several MCP servers calls it once per server, by name.
 
 **The deployed URL**, the region being the 4th field of the ARN:
 
@@ -147,25 +146,31 @@ https://bedrock-agentcore.<region>.amazonaws.com/runtimes/<URL-quoted ARN>/invoc
 
 ## 5. Layer 3: run and call it locally
 
-**Run:** start the MCP server first (`30-mcp-runtime.md`, section 4), then the agent (in the seed repo, `ac-local-agent`):
+The same generated tasks as an MCP runtime (`30-mcp-runtime.md`, section 4), from the agent's registry entry. Start its MCP servers first, then the agent:
 
 ```bash
-mise run ac-local-mcp
+mise run ac-local-<mcp slug>
 ```
 
 ```bash
-mise run ac-local-agent
+mise run ac-local-<slug>
 ```
 
-It frees the agent's local port (`LOCAL_AGENT_PORT=18732`), then serves `<package_name>.runtimes.<runtime_name>:app` with uvicorn, with `MCP_URL=http://localhost:$LOCAL_<MCP>_PORT/mcp`. Runtime `local`: the config from the files, and the model called with the environment's profile and region (`AWS_PROFILE_FOR_<ENV>` of `.env`, through `one.new_boto_ses`), so `ENV_NAME` alone picks the account. **It calls Bedrock**: the account needs access to the model.
+It frees the agent's local port, then serves `<package_name>.runtimes.<runtime_name>:app` with uvicorn on it, with one `MCP_URL_<NAME>=http://localhost:<its port>/mcp` per MCP runtime the agent calls (its `mcp_runtimes` in the registry). Runtime `local`: the config from the files, and the model called with the environment's profile and region (`AWS_PROFILE_FOR_<ENV>` of `.env`, through `one.new_boto_ses`), so `ENV_NAME` alone picks the account. **It calls Bedrock**: the account needs access to the model.
 
-**Call** (in the seed repo, `ac-local-agent-call`):
+**Call:**
 
 ```bash
-mise run ac-local-agent-call
+mise run ac-local-<slug>-call
 ```
 
-It runs `<package_name>/devtools/agent_client.py` (through the thin `.mise/tasks/ac-local-agent-call.py`) with `--url http://localhost:$LOCAL_AGENT_PORT --prompt '<sample question>'`. Add `--session-id <id>` (at least 33 characters on AgentCore) to send `X-Amzn-Bedrock-AgentCore-Runtime-Session-Id`, the header AgentCore sets from `runtimeSessionId`. Locally there is one process, so every call is the same conversation until the server restarts. As a library: `invoke_agent(url, payload, session_id=None)`.
+It sends the agent's sample `{"prompt": ...}` through `<package_name>/devtools/agent_client.py` to `http://localhost:<port>/invocations`. By hand, with a session ID (at least 33 characters on AgentCore), which travels in `X-Amzn-Bedrock-AgentCore-Runtime-Session-Id`, the header AgentCore sets from `runtimeSessionId`:
+
+```bash
+.venv/bin/python -c "from <package_name>.devtools.agent_client import main; main()" --url http://localhost:<port> --prompt '<question>' --session-id <id>
+```
+
+Locally there is one process, so every call is the same conversation until the server restarts. As a library: `invoke_agent(url, payload, session_id=None)`.
 
 **Tests and CMD:** `tests/devtools/test_devtools_agent_client.py` calls the real app, served on a free port by the fixture `agent_url` of `tests/conftest.py` with a fake agent (no model call): the answer, the session ID reaching the agent, an error status. `serve(asgi_app)` of `tests/conftest.py` serves any app on a free port for a test.
 
@@ -179,9 +184,9 @@ It runs `<package_name>/devtools/agent_client.py` (through the thin `.mise/tasks
 
 1. Its model ID as a config field, and its runtime names (`20-centralized-config.md`, section 5).
 2. Layer 1: `<package_name>/<domain>/<agent_name>.py` with `SYSTEM_PROMPT` and `TOOLS`, the tool functions, and their tests.
-3. Layer 2: `<package_name>/runtimes/<runtime_name>.py` as in section 3, with one `get_mcp_connection` per MCP server, and its test. Reuse `common.py` and `mcp_connection.py`; never copy them.
+3. Layer 2: `<package_name>/runtimes/<runtime_name>.py` as in section 3, with one `get_mcp_connection(<Mcp>, ...)` per MCP server, and its test. Reuse `common.py` and `mcp_connection.py`; never copy them.
 4. A `bind()` line per MCP server in `cdk-stack.ts` (section 4).
-5. Layer 3: a port `LOCAL_<NAME>_PORT` in `mise.toml` `[env]`, a run task like `ac-local-agent` with `MCP_URL` (one URL variable per MCP server) and the new module, and a call task like `ac-local-agent-call` with a sample prompt.
+5. Layer 3: an entry in the runtime registry with the next free local port, a sample prompt, and its `mcp_runtimes`; then `mise run gen-env-tasks` for its `ac-local-<slug>` tasks.
 6. `mise run cov`, then run its MCP servers and the agent, and call it (a model call: say so first).
 
 Packaging and deploying it are later OPs.

@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-How an agent runtime reaches an MCP runtime: locally, at a URL, without auth;
+How an agent runtime reaches an MCP runtime: locally, at the URL of its own
+environment variable, without auth;
 deployed, at the invocation URL of the MCP runtime's ARN, every request signed
 with SigV4.
 
@@ -27,16 +28,19 @@ if T.TYPE_CHECKING:  # pragma: no cover
     import boto3
     from botocore.credentials import Credentials
 
-MCP_URL_VAR = "MCP_URL"
-"""
-The URL of the MCP server, when set: the local mise tasks point an agent at a
-local server with it. It wins over the deployed ARN.
-"""
-
 SIGV4_SERVICE = "bedrock-agentcore"
 """
 The service name a request to AgentCore Runtime is signed for.
 """
+
+
+def get_local_mcp_url_env_var(runtime_name: str) -> str:
+    """
+    The environment variable that points an agent at a local server of the MCP
+    runtime ``runtime_name``, such as ``MCP_URL_MYMCP`` for ``MyMcp``: the local
+    tasks set it, and it wins over the deployed ARN.
+    """
+    return f"MCP_URL_{runtime_name.upper()}"
 
 
 def get_runtime_arn_env_var(runtime_name: str) -> str:
@@ -102,22 +106,23 @@ class AwsSigV4Auth(httpx.Auth):
 
 
 def get_mcp_connection(
-    arn_env_var: str,
+    runtime_name: str,
     boto_session: boto3.Session,
-    url_env_var: str = MCP_URL_VAR,
     default_url: str = LOCAL_MCP_URL,
 ) -> tuple[str, httpx.Auth | None]:
     """
-    Where to reach an MCP server, as ``(url, auth)``, in this order:
+    Where an agent reaches the MCP runtime ``runtime_name`` (its name in
+    ``agentcore.json``), as ``(url, auth)``, in this order:
 
-    1. ``url_env_var`` is set (local runs): that URL, no auth.
-    2. ``arn_env_var`` is set (deployed, by ``bind()``): the runtime's MCP URL,
-       signed with the credentials of ``boto_session``.
+    1. :func:`get_local_mcp_url_env_var` is set (local runs): that URL, no auth.
+    2. :func:`get_runtime_arn_env_var` is set (deployed, by ``bind()``): the
+       runtime's MCP URL, signed with the credentials of ``boto_session``.
     3. Otherwise ``default_url``, no auth.
 
-    :param arn_env_var: from :func:`get_runtime_arn_env_var`.
     :param boto_session: whose credentials sign the requests; only read in case 2.
     """
+    url_env_var = get_local_mcp_url_env_var(runtime_name)
+    arn_env_var = get_runtime_arn_env_var(runtime_name)
     if url_env_var in os.environ:
         return os.environ[url_env_var], None
     if arn_env_var in os.environ:

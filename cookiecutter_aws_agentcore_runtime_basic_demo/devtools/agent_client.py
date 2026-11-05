@@ -3,8 +3,8 @@
 """
 A small client to call an agent runtime's HTTP server by hand, the way
 AgentCore Runtime calls it: ``POST /invocations`` with a JSON payload, and the
-runtime session ID in a header. ``mise run ac-local-agent-call`` uses it on a
-local server, started with ``ac-local-agent`` or ``ac-dev-agent``.
+runtime session ID in a header. ``mise run ac-local-<slug>-call`` uses it on a
+local agent server, started with ``ac-local-<slug>`` or ``ac-dev-<slug>``.
 """
 
 from __future__ import annotations

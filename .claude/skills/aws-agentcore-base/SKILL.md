@@ -9,7 +9,7 @@ For the project's general AWS and CDK conventions (config model, environments, b
 
 ## The design
 
-`references/99-ood.md` is the operation-oriented design: every OP and sub-OP with its entry point (EP), footprint (FP), and command (CMD), and the refactor checklist. Read it before refactoring an AgentCore module or deciding which OP new work belongs to.
+`references/99-ood.md` is the operation-oriented design: every OP and sub-OP with its entry point (EP), footprint (FP), and command (CMD). Read it before refactoring an AgentCore module or deciding which OP new work belongs to. A change that breaks it changes it in the same change (`90-maintain.md`, section 5).
 
 ## References
 
@@ -29,25 +29,10 @@ One reference per OP, numbered `<OP><part>`: `10` is OP-1, `30` and `31` would b
 - **Deploy** (`references/60-deploy.md`): Read before deploying, before giving a runtime a permission or a resource, after a deploy fails, or to check a deployed environment.
 - **Teardown** (`references/70-teardown.md`): Read before tearing down an environment or any of its AgentCore parts, or when a teardown fails half way.
 - **Invoke and Observe** (`references/80-invoke-and-observe.md`): Read before writing a client that calls a deployed runtime, when an invocation is slow or fails, or to read a runtime's logs.
+- **Maintain** (`references/90-maintain.md`): Read before upgrading the AgentCore CLI, when the CLI behaves differently than these references say, before adding or removing a runtime or an environment, or after a change that breaks a reference.
 - **Operation-Oriented Design of an AgentCore Project** (`references/99-ood.md`): Read before refactoring an AgentCore module, before moving a file between OPs, or when deciding which OP a new piece of AgentCore work belongs to.
 
 <!-- END references index -->
-
-## Rewrite in progress
-
-The references are being rewritten one OP at a time, in OP order. Until an OP has its new reference, its facts are in the old, topic-based files under `references/legacy/` (not indexed). Read the legacy file the table names, and trust the code over it where they differ. When an OP's new reference lands, delete the legacy parts it replaces; delete `legacy/` when it is empty.
-
-| OP | New reference | Until then, legacy |
-| :--- | :--- | :--- |
-| OP-1 Code runtime | `10-code-runtime.md` | none |
-| OP-2 Centralized config | `20-centralized-config.md` | none |
-| OP-3 MCP runtime | `30-mcp-runtime.md` | none |
-| OP-4 Agent runtime | `40-agent-runtime.md` | none |
-| OP-5 AgentCore runtime | `50-agentcore-project-layout.md`, `51-agentcore-config.md`, `52-agentcore-packaging.md`, `53-agentcore-dev.md` | none |
-| OP-6 Deploy | `60-deploy.md` | none |
-| OP-7 Teardown | `70-teardown.md` | none |
-| OP-8 Invoke and observe | `80-invoke-and-observe.md` | none |
-| OP-9 Maintain | not yet | `legacy/12-cli-upgrade.md` |
 
 ## Scripts
 
@@ -57,7 +42,7 @@ The references are being rewritten one OP at a time, in OP order. Until an OP ha
 
 Each loads this skill, then reads the references listed. Keep both lists in step when either changes.
 
-| Invoker | Job | Walks through |
+| Invoker | Job | Reads |
 | :--- | :--- | :--- |
-| `aws-agentcore-new-mcp` | add an MCP server runtime | OP-1, OP-2, OP-3, OP-5, then OP-6 for a deploy |
-| `aws-agentcore-new-agent` | add an agent runtime | OP-1, OP-2, OP-4, OP-5, then OP-6 for a deploy; OP-8 when latency matters |
+| `aws-agentcore-new-mcp` | add an MCP server runtime | `10`, `20`, `30`, `50` to `53`, `60`; `40` if an agent calls it; `80` when it is slow or fails |
+| `aws-agentcore-new-agent` | add an agent runtime | `10`, `20`, `30`, `40`, `50` to `53`, `60`; `80` when latency matters or it fails |

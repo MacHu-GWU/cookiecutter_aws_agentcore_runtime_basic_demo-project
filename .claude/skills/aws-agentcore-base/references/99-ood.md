@@ -1,5 +1,5 @@
 ---
-description: "Operation-oriented design (OOD) of an AgentCore project made from this template: the OPs from code runtime detection, the central config, MCP and agent runtimes (local first, pure functions with injected dependencies), the AgentCore CLI project, deploy, teardown, invoke and observe, to toolchain maintenance, each with its EP, FP, and CMD, plus the refactor checklist against the current code. Read before refactoring an AgentCore module, before moving a file between OPs, or when deciding which OP a new piece of AgentCore work belongs to."
+description: "Operation-oriented design (OOD) of an AgentCore project made from this template: the OPs from code runtime detection, the central config, MCP and agent runtimes (local first, pure functions with injected dependencies), the AgentCore CLI project, deploy, teardown, invoke and observe, to toolchain maintenance, each with its EP, FP, and CMD, plus the record of the refactor that brought the code to it. Read before refactoring an AgentCore module, before moving a file between OPs, or when deciding which OP a new piece of AgentCore work belongs to."
 ---
 
 # Operation-Oriented Design of an AgentCore Project
@@ -37,7 +37,7 @@ The document is a template: it names no business domain of a particular project.
 
 ### 0.3 Marks
 
-- **(new)**: a file, function, or task the design asks for that the code does not have yet. Section 10 lists them.
+- **(new)**: a file, function, or task the design asks for that the code does not have yet. None is left; section 10 records how the code reached this design.
 - **Asks first**: changes AWS; run only after the user's yes, one environment per yes.
 
 ---
@@ -199,8 +199,8 @@ A runtime module, always under `<package_name>/runtimes/`: `<runtime_name>.py` w
 
 ### OP-3-3 Run it locally
 
-- `mise run ac-local-<slug>`: frees `LOCAL_<NAME>_PORT` (`free-port`, `<package_name>/devtools/local_port.py`, only this repo's leftover servers), then `FASTMCP_PORT=$LOCAL_<NAME>_PORT python -m <package_name>.runtimes.<runtime_name>`. Runtime `local`, config from the files.
-- Every runtime has its own unusual local port (18731, 18732, ...), below the ephemeral range, so a listener there is almost surely ours. Deployed runtimes always use AgentCore's 8000 (MCP) and 8080 (HTTP).
+- `mise run ac-local-<slug>` (generated from the registry; `devtools/local_run.py`): frees the runtime's `local_port` (`free_port` of `devtools/local_port.py`, only this repo's leftover servers), then `FASTMCP_PORT=<port> python -m <package_name>.runtimes.<runtime_name>`. Runtime `local`, config from the files.
+- Every runtime has its own unusual local port in the registry (18731, 18732, ...), below the ephemeral range, so a listener there is almost surely ours. Deployed runtimes always use AgentCore's 8000 (MCP) and 8080 (HTTP).
 
 ### OP-3-4 Test it locally
 
@@ -229,12 +229,12 @@ An agent is a prompt, a model, its own tools, and the MCP servers it uses. Follo
 - `build_agent()` gives it the dependencies of the process: `one.new_boto_ses()` (a new session, credentials resolved on the first invocation, never at import time), the model ID of the config, the MCP connection.
 - `agent = ProcessAgent(build_agent)` (`runtimes/common.py`): one agent per process, so per session; its MCP session stays open and the conversation is remembered; one call at a time; dropped after a failure.
 - `BedrockAgentCoreApp` with `@app.entrypoint invoke(payload)`: the AgentCore HTTP contract; `strip_thinking` cleans the answer.
-- Where its MCP servers are (`runtimes/mcp_connection.py`, `get_mcp_connection`): `MCP_URL` if set, else the ARN in `get_runtime_arn_env_var(<Mcp>)` (set by `bind()`, OP-5-1) turned into the invocation URL and signed with `AwsSigV4Auth`, else `LOCAL_MCP_URL`.
+- Where its MCP servers are (`runtimes/mcp_connection.py`, `get_mcp_connection(<Mcp>, boto_session)`): `MCP_URL_<MCP NAME>` if set, else the ARN in `get_runtime_arn_env_var(<Mcp>)` (set by `bind()`, OP-5-1) turned into the invocation URL and signed with `AwsSigV4Auth`, else `LOCAL_MCP_URL`.
 - `main()`: `print_config_source()`, then `app.run()`.
 
 ### OP-4-3 Run and test it locally
 
-- `mise run ac-local-<slug>`: frees its port, then uvicorn serves `<package_name>.runtimes.<runtime_name>:app` with `MCP_URL` pointing at the local MCP server's port; the model is called with the environment's profile and region through `one.new_boto_ses`. Start the MCP server first (OP-3-3).
+- `mise run ac-local-<slug>`: frees its port, then uvicorn serves `<package_name>.runtimes.<runtime_name>:app` with one `MCP_URL_<NAME>` per MCP runtime of its `mcp_runtimes`, pointing at their local ports; the model is called with the environment's profile and region through `one.new_boto_ses`. Start the MCP server first (OP-3-3).
 - Tests: the agent loads every tool against a real local MCP server, without a model call; `ProcessAgent` with fake agents; `invoke`; `main()`.
 - By hand: `mise run ac-local-<slug>-call` sends a sample prompt through the tested client `<package_name>/devtools/agent_client.py` (optionally with `--session-id`).
 
@@ -284,7 +284,7 @@ The rule: AgentCore resources live in this project; anything else the runtimes u
 
 Different from OP-3-3 and OP-4-3: this runs the **packaged** copy, as close to deployed as it gets on a dev machine.
 
-- `mise run ac-dev-<slug>`: frees the port, then `agentcore dev --agent <Runtime> --port $LOCAL_<NAME>_PORT --no-traces`. Always an explicit `--port`: without it the CLI silently moves to the next free port.
+- `mise run ac-dev-<slug>`: frees the port, then `AWS_REGION=<config region> agentcore dev --agent <Runtime> --port <local port> --no-traces`. Always an explicit `--port`: without it the CLI silently moves to the next free port.
 - Runtime `agentcore_local` (OP-1-2): config from SSM, so `config-deploy-<env>` must have run (asks first); credentials from the local profile.
 - Python env: `app/<Runtime>/.venv`, made by the CLI from the generated `pyproject.toml`. An HTTP runtime reloads when `ac-gen` rewrites the copy.
 - The same ports as OP-3-3 and OP-4-3, so local and packaged servers mix, and the same `-call` tasks reach them.
@@ -383,14 +383,14 @@ One client per protocol, each taking a URL (or an ARN) and an auth, so the same 
 ### OP-8-2 Sessions
 
 - One session, one microVM: a new session ID is a cold start, the same one goes back to the warm microVM until the idle timeout (default 15 min) or the max lifetime (default 8 h).
-- The caller makes one `runtimeSessionId` per conversation (at least 33 characters, never shared between users) and sends it with every message: `--session-id` for `agentcore invoke`, `SESSION_ID` for `ac-invoke-<env>-<slug>` (new).
+- The caller makes one `runtimeSessionId` per conversation (at least 33 characters, never shared between users) and sends it with every message: `--session-id` for `agentcore invoke`, `SESSION_ID` for `ac-invoke-<env>-<slug>`.
 - For MCP the platform picks the `Mcp-Session-Id` and the client sends it back; an agent keeps one MCP session per agent session by keeping one agent per process (OP-4-2).
 - Keep the MCP runtime's idle timeout at least the agent's.
 
 ### OP-8-3 Logs and debugging
 
 - Log group `/aws/bedrock-agentcore/runtimes/<runtime ID>-DEFAULT`, one stream per session: a new stream per call means a new (cold) session. The runtime ID is known only after a deploy: `agentcore status`, the stack's console URL, or `describe-log-groups` by the physical-name prefix.
-- A task that prints each runtime's log group of `<env>` (new, read-only).
+- `ac-logs-<env>-<slug>`: `agentcore logs runtime`, the recent logs of one runtime (read-only).
 - Latency: the T1–T5 breakdown of `02`; time the same prompt three times with one session ID.
 - Failures met so far, with fixes: the table of `11`. Add every new one.
 
@@ -400,10 +400,10 @@ One client per protocol, each taking a URL (or an ARN) and an auth, so the same 
 
 Keep the toolchain current and the project consistent over its life.
 
-- EP: `.claude/skills/aws-agentcore-base/scripts/check_cdk_layout.py`; `.mise/tasks/gen-env-tasks.py`
+- EP: `.claude/skills/aws-agentcore-base/scripts/check_cdk_layout.py`; `<package_name>/agentcore_project/registry.py`
 - FP: `mise.toml` `[tools]`, `agentcore/cdk/package.json` and `package-lock.json`, the constants that depend on CLI behavior, the registry, the `aws-agentcore-*` skills
 - CMD: `mise run ac-check-layout`, `mise run gen-env-tasks`, then the CMDs of OP-3 to OP-5
-- Docs: `90-maintain.md` (to write), this file
+- Docs: `90-maintain.md`, this file
 
 ### OP-9-1 Upgrade the AgentCore CLI
 
@@ -411,7 +411,7 @@ Bump `"npm:@aws/agentcore"` in `mise.toml` and `@aws/agentcore-cdk` in `agentcor
 
 ### OP-9-2 The undocumented behaviors
 
-The table of `12`: each behavior this repo relies on (such as `LOCAL_DEV` of OP-1-2, the CodeZip platforms of OP-5-3, `bind()`'s env var name, the empty-project teardown of OP-7-1), the constant or code that relies on it, and where to look in the CLI's source. Each such constant's docstring points back to `12`.
+The table of `90-maintain.md`, section 2: each behavior this repo relies on (such as `LOCAL_DEV` of OP-1-2, the CodeZip platforms of OP-5-3, `bind()`'s env var name, the empty-project teardown of OP-7-1, the raw JSON-RPC payload of `agentcore invoke`), the code that relies on it, and where to look in the CLI's source.
 
 ### OP-9-3 The runtime dependencies
 
@@ -419,9 +419,9 @@ The `agentcore` dependency group is what every runtime installs: keep it small (
 
 ### OP-9-4 Runtimes and environments over time
 
-- Add a runtime: the invokers (section 1). Remove or rename one: its registry entry, its names in the config, its `bind()` lines, then `gen-env-tasks` and `ac-gen`; deploying drops the old runtime.
+- Add a runtime: the invokers (section 1). Rename or remove one: its registry entry, its names in the config, its `bind()` lines and other agents' `mcp_runtimes`, then `gen-env-tasks` and `ac-gen`; the next deploy replaces or drops it.
 - Add an environment: `EnvNameEnum` (owned by `pywf-aws-cdk-base`), its config files, `mise run gen-env-tasks`.
-- `gen-env-tasks` renders the per-environment tasks (OP-6, OP-7) and the per-runtime tasks (new: `ac-local-<slug>`, `ac-local-<slug>-call`, `ac-dev-<slug>`, `ac-invoke-<env>-<slug>`) from `EnvNameEnum` and the registry; no per-runtime task is hand-written.
+- `gen-env-tasks` renders the per-environment tasks (OP-6, OP-7, OP-8) and the per-runtime tasks (`ac-local-<slug>`, `ac-local-<slug>-call`, `ac-dev-<slug>`, `ac-invoke-<env>-<slug>`, `ac-logs-<env>-<slug>`) from `EnvNameEnum` and the registry (`local_port`, `sample_payload`, `mcp_runtimes`); no per-runtime task is hand-written.
 
 ### OP-9-5 Keep the docs in step
 
@@ -429,37 +429,35 @@ A change that breaks this design changes this file in the same change. A fact a 
 
 ---
 
-## 10. Refactor checklist: the code today against this design
+## 10. Refactor record: how the code reached this design
 
 | # | Today | Design | OP |
 | :--- | :--- | :--- | :--- |
 | R1 | done in OP-3: `runtimes/__init__.py` states the layer rule. Was: it said the runtimes never import config or `one`; both do | the layer rule of section 2: layer 1 never does, layers 2 and 3 do | OP-3-2, OP-4-2 |
-| R2 | done in OP-3 and OP-4: `FASTMCP_PORT` and `LOCAL_MCP_URL` in `runtimes/common.py`, `MCP_URL` and the `bind()` ARN variable (`get_runtime_arn_env_var`) in `runtimes/mcp_connection.py` | one documented constant each, in the module of the OP that owns it | OP-3-2, OP-4-2 |
+| R2 | done in OP-3 and OP-4: `FASTMCP_PORT` and `LOCAL_MCP_URL` in `runtimes/common.py`, the local URL and the `bind()` ARN variable of each MCP runtime (`get_local_mcp_url_env_var`, `get_runtime_arn_env_var`) in `runtimes/mcp_connection.py` (OP-9) | one documented constant each, in the module of the OP that owns it | OP-3-2, OP-4-2 |
 | R3 | done in OP-4: SigV4, ARN to URL, the lookup order in `runtimes/mcp_connection.py`; `strip_thinking`, `ProcessAgent`, the startup print in `runtimes/common.py` | the shared module of OP-4-2; tag stripping as layer 1 of OP-4-1 | OP-4 |
 | R4 | done in OP-4: the prompt and the own tools in `<domain>/<agent_name>.py`. Was: in the runtime module | layer 1, no `strands` import | OP-4-1 |
-| R5 | the registry (`agentcore_project/registry.py` since OP-5) has name, module, protocol only; ports in `mise.toml [env]`, sample calls in the call tasks | slug, port, sample call in the registry, when the tasks are generated | OP-9-4 |
-| R6 | `ac-local-*`, `ac-dev-*`, the call tasks, `ac-invoke-dev-agent` are hand-written, with runtime names and module paths inline; `ac-dev-*` and `ac-invoke-dev-agent` still set `us-east-1` and the dev profile (`ac-local-agent` no longer does, OP-4) | generated per runtime (and environment), region and profile from the environment | OP-9-4 |
+| R5 | done: the registry (`agentcore_project/registry.py`, OP-5) holds the slug and sample payload (OP-6), the local port and an agent's MCP runtimes (OP-9) | | OP-5-2, OP-9-4 |
+| R6 | done: every per-runtime task is generated (`ac-invoke`, `ac-logs` per environment in OP-6 and OP-8; `ac-local`, `ac-dev`, `-call` in OP-9, through `devtools/local_run.py`); the region and profile come from the environment | | OP-9-4 |
 | R7 | done: local calls in `devtools/mcp_client.py` (OP-3) and `devtools/agent_client.py` (OP-4); deployed calls in `devtools/agentcore_client.py` and the `auth` of `mcp_client` (OP-8) | one tested client module; scripts are thin EPs | OP-8-1 |
 | R8 | done in OP-3: `local_port.py` and the MCP client are in `<package_name>/devtools/`, dev tooling never copied into a runtime | | OP-3-3 |
 | R9 | done in OP-6: `agentcore_project/mise_tasks.py` renders the AgentCore tasks and the whole block; `cdk/mise_tasks.py` knows nothing of AgentCore | | OP-6, OP-7 |
 | R10 | done in OP-5: `mise run ac-check-wheels`; the loop moved into `codezip.check_codezip_installs` | | OP-5-3 |
 | R11 | done: the CLI tasks `ac-status-<env>`, `ac-invoke-<env>-<slug>`, `ac-test-<env>` (OP-6); `tests_int/test_agentcore_runtimes.py` through the Python client (OP-8) | | OP-6-4, OP-8 |
-| R12 | the references were by topic | rewritten one per OP, in OP order; the old ones wait in `legacy/` (see below) | OP-9-5 |
+| R12 | done: the references, once by topic, are rewritten one per OP, in OP order; `legacy/` is gone | | OP-9-5 |
 
-The references, one per OP, numbered `<OP><part>` so the file order is the OP order. Each opens with "Implements OP-N" and its EP, FP, CMD, and cites only lower numbers. The legacy file is what to read for facts until the new one is written; the new one is written from the code, the legacy one is only a source.
+The references, one per OP, numbered `<OP><part>` so the file order is the OP order. Each opens with "Implements OP-N" and its EP, FP, CMD, and cites only lower numbers.
 
-| New reference | OP | Status | Legacy sources (`legacy/`) |
-| :--- | :--- | :--- | :--- |
-| `00-agentcore-docs-mcp.md` | every OP (a habit) | done | `01` (deleted) |
-| `10-code-runtime.md` | OP-1 | done | `06` section 1 |
-| `20-centralized-config.md` | OP-2 | done | `06` section 3, `05` sections 1 and 2 |
-| `30-mcp-runtime.md` | OP-3 | done | `09` (deleted), `10` sections 2 and 3 |
-| `40-agent-runtime.md` | OP-4 | done | `08` (deleted), `02` section 4.2 |
-| `50-` to `53-` | OP-5, one per layer | done | `03`, `04`, `06`, `10` (deleted), `07` sections 1, 2, 4, `05` section 4 |
-| `60-deploy.md` | OP-6 | done | `07` (deleted), `11` sections 1, 2, 4 |
-| `70-teardown.md` | OP-7 | done | `11` sections 5 and 6 |
-| `80-invoke-and-observe.md` | OP-8 | done | `02`, `05`, `11` (deleted) |
-| `90-maintain.md` | OP-9 | to write | `12` |
-| `99-ood.md` | the design | this file | |
-
-When the last one is written, `legacy/` is deleted and the invokers are rewritten to read the new references.
+| Reference | OP |
+| :--- | :--- |
+| `00-agentcore-docs-mcp.md` | every OP (a habit) |
+| `10-code-runtime.md` | OP-1 |
+| `20-centralized-config.md` | OP-2 |
+| `30-mcp-runtime.md` | OP-3 |
+| `40-agent-runtime.md` | OP-4 |
+| `50-agentcore-project-layout.md`, `51-agentcore-config.md`, `52-agentcore-packaging.md`, `53-agentcore-dev.md` | OP-5, one per layer |
+| `60-deploy.md` | OP-6 |
+| `70-teardown.md` | OP-7 |
+| `80-invoke-and-observe.md` | OP-8 |
+| `90-maintain.md` | OP-9 |
+| `99-ood.md` | the design |
