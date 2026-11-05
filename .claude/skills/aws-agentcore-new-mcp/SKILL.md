@@ -5,7 +5,7 @@ description: "Add a new MCP server runtime to this AgentCore project: its name i
 
 Add one MCP server runtime to the project, end to end, following the patterns of `PowerPlantMcp`.
 
-Read ../aws-agentcore-base/SKILL.md, then ../aws-agentcore-base/references/10-code-runtime.md (OP-1) and ../aws-agentcore-base/references/20-centralized-config.md (OP-2), ../aws-agentcore-base/references/30-mcp-runtime.md (OP-3), then the legacy references below. The base references are being rewritten one OP at a time: until then, a short citation such as `05` or `10` in this file means the legacy file of that number, `references/legacy/NN-*.md`, not the new reference with the same number.
+Read ../aws-agentcore-base/SKILL.md, then ../aws-agentcore-base/references/10-code-runtime.md (OP-1) and ../aws-agentcore-base/references/20-centralized-config.md (OP-2), ../aws-agentcore-base/references/30-mcp-runtime.md (OP-3), ../aws-agentcore-base/references/40-agent-runtime.md (OP-4), then the legacy references below. The base references are being rewritten one OP at a time: until then, a short citation such as `05` or `10` in this file means the legacy file of that number, `references/legacy/NN-*.md`, not the new reference with the same number.
 - ../aws-agentcore-base/references/legacy/03-project-layout.md
 - ../aws-agentcore-base/references/legacy/04-packaging.md
 - ../aws-agentcore-base/references/legacy/05-naming.md
@@ -13,7 +13,7 @@ Read ../aws-agentcore-base/SKILL.md, then ../aws-agentcore-base/references/10-co
 - ../aws-agentcore-base/references/legacy/07-agentcore-vs-other-resources.md
 - ../aws-agentcore-base/references/legacy/10-local-dev.md
 
-Read ../aws-agentcore-base/references/legacy/08-agent-to-mcp.md too if an agent will call it, and ../aws-agentcore-base/references/legacy/11-deploy-and-troubleshoot.md before a deploy. For new modules and tests, follow the `pywf-oss-add-module` and `pywf-oss-write-test` skills.
+Read ../aws-agentcore-base/references/legacy/11-deploy-and-troubleshoot.md before a deploy. For new modules and tests, follow the `pywf-oss-add-module` and `pywf-oss-write-test` skills.
 
 ## 1. Agree on the design first
 
@@ -43,7 +43,7 @@ Then propose, in one message:
 5. **Register it**: a `RuntimeSpec(name=..., module="runtimes.<snake>_mcp", protocol="MCP")` in `get_runtime_specs()` of `agentcore_project/project_files.py`; update `test_get_runtime_specs`.
 6. **Permissions and resources** (`07`): statements in the `agentcore_deps` policy, new resources as new `s0N_` methods of that stack, their names in the config; assert them in the stack's test. New config fields: add to `Config`, every `config/*.json5` that needs them, `config/example/`, and the `config` fixture plus fake secret files in `tests/conftest.py`.
 7. **Local tasks** (`10`): in `mise.toml`, a port variable `LOCAL_<NAME>_PORT` in `[env]`, then `ac-local-<slug>` and `ac-dev-<slug>` copied from `ac-local-mcp` / `ac-dev-mcp` with the new port, module, and runtime name. For a call task, copy `ac-local-mcp-call` with the new port and a sample `--tool` / `--arguments` (`30-mcp-runtime.md`, section 4); the script is generic.
-8. **An agent that calls it**: follow `08`, section 5 (or use the `aws-agentcore-new-agent` skill for a new agent).
+8. **An agent that calls it**: a `bind()` line and one more `get_mcp_connection` in the agent (`40-agent-runtime.md`, sections 4 and 6), or the `aws-agentcore-new-agent` skill for a new agent.
 
 ## 3. Verify
 

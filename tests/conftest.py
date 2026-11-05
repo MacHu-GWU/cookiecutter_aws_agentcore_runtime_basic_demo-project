@@ -4,6 +4,7 @@ import pytest
 
 import time
 import shutil
+import contextlib
 import socket
 import threading
 
@@ -66,6 +67,28 @@ def config() -> Config:
     )
 
 
+@contextlib.contextmanager
+def serve(asgi_app):
+    """
+    Serve ``asgi_app`` with uvicorn on a free local port, in a thread, and give
+    its base URL, such as ``http://127.0.0.1:54321``.
+    """
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        port = sock.getsockname()[1]
+    config = uvicorn.Config(asgi_app, host="127.0.0.1", port=port, log_level="warning")
+    server = uvicorn.Server(config)
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    while not server.started:
+        time.sleep(0.05)
+    try:
+        yield f"http://127.0.0.1:{port}"
+    finally:
+        server.should_exit = True
+        thread.join()
+
+
 @pytest.fixture(scope="session")
 def mcp_url():
     """
@@ -76,20 +99,36 @@ def mcp_url():
         mcp,
     )
 
-    with socket.socket() as sock:
-        sock.bind(("127.0.0.1", 0))
-        port = sock.getsockname()[1]
-    config = uvicorn.Config(
-        mcp.streamable_http_app(),
-        host="127.0.0.1",
-        port=port,
-        log_level="warning",
+    with serve(mcp.streamable_http_app()) as url:
+        yield f"{url}/mcp"
+
+
+@pytest.fixture
+def agent_url(monkeypatch):
+    """
+    Serve the real ``SiteAgent`` app on a free local port, with a fake agent that
+    answers ``answer to <prompt> in session <session ID>`` and fails on the
+    prompt ``fail``; give its base URL. No model is called.
+    """
+    from bedrock_agentcore.runtime import BedrockAgentCoreContext
+
+    from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes import site_agent
+    from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.common import (
+        ProcessAgent,
     )
-    server = uvicorn.Server(config)
-    thread = threading.Thread(target=server.run, daemon=True)
-    thread.start()
-    while not server.started:
-        time.sleep(0.05)
-    yield f"http://127.0.0.1:{port}/mcp"
-    server.should_exit = True
-    thread.join()
+
+    class FakeAgent:
+        def __call__(self, prompt):
+            if prompt == "fail":
+                raise ValueError("the agent failed")
+            session_id = BedrockAgentCoreContext.get_session_id()
+            return (
+                f"<thinking>hmm</thinking> answer to {prompt} in session {session_id}"
+            )
+
+        def cleanup(self):
+            pass
+
+    monkeypatch.setattr(site_agent, "agent", ProcessAgent(FakeAgent))
+    with serve(site_agent.app) as url:
+        yield url

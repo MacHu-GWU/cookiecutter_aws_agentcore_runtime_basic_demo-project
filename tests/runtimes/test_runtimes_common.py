@@ -12,6 +12,12 @@ from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.common import doc_fr
 from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.common import (
     print_config_source,
 )
+from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.common import (
+    strip_thinking,
+)
+from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.common import ProcessAgent
+
+import pytest
 
 import asyncio
 
@@ -68,6 +74,55 @@ def test_doc_from():
 def test_print_config_source(capsys):
     print_config_source()
     assert capsys.readouterr().out == "Loaded the config of 'dev' on runtime 'local'\n"
+
+
+def test_strip_thinking():
+    text = "<thinking> windy,\n so no </thinking>\n\nNo, too windy."
+    assert strip_thinking(text) == "No, too windy."
+    assert strip_thinking("<response> No. </response>") == "No."
+    assert strip_thinking("plain") == "plain"
+
+
+class FakeAgent:
+    """Answers with the prompt; fails when told to; its cleanup fails too."""
+
+    def __init__(self):
+        self.prompts = []
+        self.fail = False
+
+    def __call__(self, prompt):
+        if self.fail:
+            raise ConnectionError("MCP connection lost")
+        self.prompts.append(prompt)
+        return f"answer to {prompt}"
+
+    def cleanup(self):
+        raise RuntimeError("a failing cleanup is ignored")
+
+
+def test_process_agent():
+    built = []
+
+    def build():
+        built.append(FakeAgent())
+        return built[-1]
+
+    agent = ProcessAgent(build)
+    assert built == []  # nothing is built before the first call
+    # one agent for every call of the process: one conversation
+    assert agent("a") == "answer to a"
+    assert agent("b") == "answer to b"
+    assert len(built) == 1
+    assert built[0].prompts == ["a", "b"]
+    # a failing call drops the agent; the next call builds a new one
+    built[0].fail = True
+    with pytest.raises(ConnectionError):
+        agent("c")
+    assert agent("d") == "answer to d"
+    assert len(built) == 2
+    # reset without an agent does nothing
+    agent.reset()
+    agent.reset()
 
 
 if __name__ == "__main__":

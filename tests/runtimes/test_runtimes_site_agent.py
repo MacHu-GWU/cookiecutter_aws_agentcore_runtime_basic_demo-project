@@ -1,182 +1,77 @@
 # -*- coding: utf-8 -*-
 
-from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import (
-    LOCAL_MCP_URL,
-)
-from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import (
-    get_weather,
-)
-from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import (
-    strip_thinking,
-)
-from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import (
-    MCP_ARN_ENV_VAR,
-)
-from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import (
-    AwsSigV4Auth,
-)
-from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import (
-    get_runtime_mcp_url,
-)
-from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import (
-    get_mcp_connection,
-)
 from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import make_agent
+from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import (
+    build_agent,
+)
 from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import app
 from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import invoke
-from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import (
-    reset_agent,
-)
 from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import main
 
-import pytest
+import boto3
 
-
-import httpx
-
+from cookiecutter_aws_agentcore_runtime_basic_demo.config.api import Config
 from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes import site_agent
+from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.common import ProcessAgent
+from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.mcp_connection import (
+    get_runtime_arn_env_var,
+)
+
+TOOL_NAMES = [
+    "get_site",
+    "get_technician",
+    "get_weather",
+    "list_assets",
+    "list_sites",
+]
 
 
-def test_get_weather():
-    assert get_weather.tool_name == "get_weather"
-    assert get_weather(41.1, -105.9).safe_for_inspection is False
+def test_mcp_arn_env_var(config: Config):
+    """The variable bind() sets for PowerPlantMcp, named in cdk-stack.ts."""
+    name = config.agentcore_runtime_name_power_plant_mcp
+    assert get_runtime_arn_env_var(name) == "AGENTCORE_RUNTIME_POWERPLANTMCP_ARN"
 
 
-def test_strip_thinking():
-    text = "<thinking> windy,\n so no </thinking>\n\nNo, too windy."
-    assert strip_thinking(text) == "No, too windy."
-    assert strip_thinking("<response> No. </response>") == "No."
-    assert strip_thinking("plain") == "plain"
-
-
-RUNTIME_ARN = "arn:aws:bedrock-agentcore:us-east-1:111122223333:runtime/AcRtDemo_dev_PowerPlantMcp-abc"
-
-
-def test_aws_sigv4_auth(monkeypatch):
-    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "AKIDEXAMPLE")
-    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "secret")
-    monkeypatch.delenv("AWS_SESSION_TOKEN", raising=False)
-    monkeypatch.delenv("AWS_PROFILE", raising=False)
-    auth = AwsSigV4Auth("us-east-1")
-    request = httpx.Request("POST", get_runtime_mcp_url(RUNTIME_ARN), content=b"{}")
-    signed = next(auth.auth_flow(request))
-    assert signed.headers["Authorization"].startswith(
-        "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/"
-    )
-    assert (
-        "/us-east-1/bedrock-agentcore/aws4_request" in signed.headers["Authorization"]
-    )
-    assert "X-Amz-Date" in signed.headers
-
-
-def test_get_runtime_mcp_url():
-    assert get_runtime_mcp_url(RUNTIME_ARN) == (
-        "https://bedrock-agentcore.us-east-1.amazonaws.com/runtimes/"
-        "arn%3Aaws%3Abedrock-agentcore%3Aus-east-1%3A111122223333"
-        "%3Aruntime%2FAcRtDemo_dev_PowerPlantMcp-abc/invocations?qualifier=DEFAULT"
-    )
-
-
-def test_get_mcp_connection(monkeypatch):
-    monkeypatch.delenv("MCP_URL", raising=False)
-    monkeypatch.delenv(MCP_ARN_ENV_VAR, raising=False)
-    assert get_mcp_connection() == (LOCAL_MCP_URL, None)
-
-    monkeypatch.setenv(MCP_ARN_ENV_VAR, RUNTIME_ARN)
-    url, auth = get_mcp_connection()
-    assert url == get_runtime_mcp_url(RUNTIME_ARN)
-    assert isinstance(auth, AwsSigV4Auth)
-    assert auth.region == "us-east-1"
-
-    monkeypatch.setenv("MCP_URL", "http://example.com/mcp")
-    assert get_mcp_connection() == ("http://example.com/mcp", None)
-
-
-def test_make_agent(monkeypatch, mcp_url):
-    """The agent loads the MCP tools over HTTP; no LLM call is made."""
-    monkeypatch.setenv("AWS_REGION", "us-east-1")
-    agent = make_agent("us.amazon.nova-2-lite-v1:0", mcp_url)
+def test_make_agent(mcp_url):
+    """The agent has its own tools and the MCP tools, loaded over HTTP; no LLM call."""
+    session = boto3.Session(region_name="us-east-1")
+    agent = make_agent("us.amazon.nova-2-lite-v1:0", session, mcp_url)
     try:
-        assert sorted(agent.tool_names) == [
-            "get_site",
-            "get_technician",
-            "get_weather",
-            "list_assets",
-            "list_sites",
-        ]
+        assert sorted(agent.tool_names) == TOOL_NAMES
+    finally:
+        agent.cleanup()
+
+
+def test_build_agent(mcp_url, monkeypatch):
+    """With the dependencies of the process: here the local MCP server of MCP_URL."""
+    monkeypatch.setenv("MCP_URL", mcp_url)
+    agent = build_agent()
+    try:
+        assert sorted(agent.tool_names) == TOOL_NAMES
     finally:
         agent.cleanup()
 
 
 class FakeAgent:
-    def __init__(self, fail: bool = False):
-        self.fail = fail
-        self.prompts = []
-        self.cleaned = False
-
     def __call__(self, prompt):
-        if self.fail:
-            raise ConnectionError("MCP connection lost")
-        self.prompts.append(prompt)
         return f"<thinking>hmm</thinking> answer to {prompt}"
 
     def cleanup(self):
-        self.cleaned = True
-        raise RuntimeError("a failing cleanup is ignored")
+        pass
 
 
-@pytest.fixture
-def fake_agents(monkeypatch):
-    """
-    Make make_agent return FakeAgent instances, recorded in the returned list,
-    and start and end the test without an agent of the process.
-    """
-    monkeypatch.delenv("MCP_URL", raising=False)
-    monkeypatch.delenv(MCP_ARN_ENV_VAR, raising=False)
-    agents = []
-
-    def fake_make_agent(*args):
-        agent = FakeAgent()
-        agents.append(agent)
-        return agent
-
-    monkeypatch.setattr(site_agent, "make_agent", fake_make_agent)
-    reset_agent()
-    yield agents
-    monkeypatch.setattr(site_agent, "_agent", None)
-
-
-def test_invoke_reuses_the_agent(fake_agents):
-    """One agent serves every invocation of the process: one MCP session, one conversation."""
+def test_invoke(monkeypatch):
+    """The answer of the agent of the process, without the model's thinking."""
+    monkeypatch.setattr(site_agent, "agent", ProcessAgent(FakeAgent))
     assert invoke({"prompt": "hi"}) == {"result": "answer to hi"}
-    assert invoke({"prompt": "and?"}) == {"result": "answer to and?"}
-    assert len(fake_agents) == 1
-    assert fake_agents[0].prompts == ["hi", "and?"]
-    assert fake_agents[0].cleaned is False
 
 
-def test_invoke_resets_the_agent_after_a_failure(fake_agents, monkeypatch):
-    """A failed call drops the agent, so the next invocation starts with a new one."""
-    monkeypatch.setattr(site_agent, "_agent", FakeAgent(fail=True))
-    failed = site_agent._agent
-    with pytest.raises(ConnectionError):
-        invoke({"prompt": "hi"})
-    assert failed.cleaned is True
-    assert site_agent._agent is None
-    assert invoke({"prompt": "hi"}) == {"result": "answer to hi"}
-    assert len(fake_agents) == 1
-
-
-def test_reset_agent_without_an_agent(fake_agents):
-    reset_agent()
-    assert site_agent._agent is None
-
-
-def test_main(monkeypatch):
+def test_main(monkeypatch, capsys):
     calls = []
     monkeypatch.setattr(app, "run", lambda: calls.append("run"))
     main()
     assert calls == ["run"]
+    assert "Loaded the config of 'dev'" in capsys.readouterr().out
 
 
 if __name__ == "__main__":

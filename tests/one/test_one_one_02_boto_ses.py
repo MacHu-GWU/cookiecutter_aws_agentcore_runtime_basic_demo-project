@@ -27,6 +27,25 @@ def test_bsm_agentcore(monkeypatch):
     assert "config" not in one.__dict__
 
 
+def test_new_boto_ses(monkeypatch):
+    """A new session each call, with the region of the current environment."""
+    monkeypatch.setenv("IS_AGENTCORE_RUNTIME", "true")
+    monkeypatch.setenv("AWS_REGION", "us-west-2")
+    one = One()
+    first = one.new_boto_ses()
+    assert first.region_name == "us-west-2"
+    assert one.new_boto_ses() is not first
+
+
+def test_get_bsm_kwargs_profile(monkeypatch):
+    """Locally, the profile of the environment when it is set."""
+    monkeypatch.setenv("AWS_PROFILE_FOR_DEV", "my-dev-profile")
+    assert One().get_bsm_kwargs() == {
+        "region_name": "us-east-1",
+        "profile_name": "my-dev-profile",
+    }
+
+
 if __name__ == "__main__":
     from cookiecutter_aws_agentcore_runtime_basic_demo.tests import run_cov_test
 

@@ -16,16 +16,18 @@ import argparse
 from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 
+from ..runtimes.common import LOCAL_MCP_URL
+
 MCP_URL_VAR = "MCP_URL"
 """
 The URL of the MCP server to call when ``--url`` is not given; the mise tasks
 set it to the local port of the server.
 """
 
-DEFAULT_MCP_URL = "http://localhost:8000/mcp"
+DEFAULT_MCP_URL = LOCAL_MCP_URL
 """
-The URL when neither ``--url`` nor :data:`MCP_URL_VAR` is given: ``agentcore
-dev`` without ``--port``.
+The URL when neither ``--url`` nor :data:`MCP_URL_VAR` is given: a local server
+on the default port, such as ``agentcore dev`` without ``--port``.
 """
 
 

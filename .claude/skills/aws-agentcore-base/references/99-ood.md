@@ -215,34 +215,28 @@ A runtime module, always under `<package_name>/runtimes/`: `<runtime_name>.py` w
 An agent is a prompt, a model, its own tools, and the MCP servers it uses. Following section 2, everything but the framework is plain Python; the Strands agent is a thin layer; the whole runs locally against a local MCP server. Deploying it is OP-5 and OP-6.
 
 - EP: `<package_name>/runtimes/<runtime_name>.py`, or `<package_name>/runtimes/<runtime_name>/main.py`
-- FP: `<package_name>/<domain>/**` (its tools and prompt), the runtime module, the shared agent-to-MCP module (new, OP-4-2), `tests/<domain>/**`, `tests/runtimes/**`
-- CMD: `mise run cov`; `mise run ac-local-<mcp slug>`, `ac-local-<slug>`, then `ac-local-<slug>-call` (calls Bedrock: say so first)
-- Docs: `40-agent-runtime.md` (to write)
+- FP: `<package_name>/<domain>/<agent_name>.py` and its tool functions, the runtime module, `<package_name>/runtimes/{common,mcp_connection}.py`, `one.new_boto_ses`, `<package_name>/devtools/agent_client.py`, `tests/<domain>/**`, `tests/runtimes/**`, `tests/devtools/**`
+- CMD: per layer (see the reference); `mise run cov`; `mise run ac-local-<mcp slug>`, `ac-local-<slug>`, then `ac-local-<slug>-call` (calls Bedrock: say so first)
+- Docs: `40-agent-runtime.md`
 
 ### OP-4-1 Layer 1: what the agent is, in plain Python
 
-No `strands` import:
-
-- The system prompt, as a constant.
-- Its own tool functions: pure, typed, with a docstring for the LLM and a contract model as the return type, exactly as OP-3-1.
-- Answer post-processing, such as removing `<thinking>` tags some models add.
-- The model ID is a config field (OP-2-2), not a constant.
+`<package_name>/<domain>/<agent_name>.py`, no `strands` import: `SYSTEM_PROMPT`, and `TOOLS`, its own tool functions (pure, typed, a docstring for the LLM, a contract model, exactly as OP-3-1). The model ID is a config field (OP-2-2), not a constant.
 
 ### OP-4-2 Layer 2: the Strands agent
 
-- A factory `make_agent(model_id, <mcp connections>)` that builds the `Agent`: `BedrockModel`, the prompt, its own tools wrapped with `strands.tool`, one `MCPClient` per MCP server. Everything it needs is an argument.
-- `BedrockAgentCoreApp` with an `@app.entrypoint` `invoke(payload)`: the AgentCore HTTP contract (`POST /invocations`, `GET /ping`, port 8080).
-- **One agent per process**: built on the first invocation, kept for the session, so its MCP session stays open (the MCP microVM stays warm) and the conversation is remembered. One invocation at a time (a lock); after a failure the agent is dropped and the next invocation builds a new one.
-- **Where its MCP servers are**, in order: a local URL variable if set (`MCP_URL`, one per MCP server), else the deployed ARN in `AGENTCORE_RUNTIME_<NAME>_ARN` (set by `bind()`, OP-5-1) turned into the invocation URL and signed with SigV4, else the default local URL.
-- The generic part (SigV4 auth, ARN to URL, the lookup order taking the variable names as arguments, the startup print) lives in one shared module under `<package_name>/runtimes/` (new), not in an agent module, so a second agent reuses it.
-- Credentials and the signer are made on the first invocation, never at import time.
-- `main()`: load the config, print where it came from, `app.run()`.
+- `make_agent(model_id, boto_session, mcp_url, mcp_auth)` builds the `Agent` from its arguments only: `BedrockModel`, the prompt, `TOOLS` wrapped with `strands.tool`, one `MCPClient` per MCP server.
+- `build_agent()` gives it the dependencies of the process: `one.new_boto_ses()` (a new session, credentials resolved on the first invocation, never at import time), the model ID of the config, the MCP connection.
+- `agent = ProcessAgent(build_agent)` (`runtimes/common.py`): one agent per process, so per session; its MCP session stays open and the conversation is remembered; one call at a time; dropped after a failure.
+- `BedrockAgentCoreApp` with `@app.entrypoint invoke(payload)`: the AgentCore HTTP contract; `strip_thinking` cleans the answer.
+- Where its MCP servers are (`runtimes/mcp_connection.py`, `get_mcp_connection`): `MCP_URL` if set, else the ARN in `get_runtime_arn_env_var(<Mcp>)` (set by `bind()`, OP-5-1) turned into the invocation URL and signed with `AwsSigV4Auth`, else `LOCAL_MCP_URL`.
+- `main()`: `print_config_source()`, then `app.run()`.
 
 ### OP-4-3 Run and test it locally
 
-- `mise run ac-local-<slug>`: frees its port, then uvicorn serves `<package_name>.runtimes.<runtime_name>:app` with the environment's profile and region, and `MCP_URL` pointing at the local MCP server's port. Start the MCP server first (OP-3-3).
-- Tests (`tests/runtimes/test_runtimes_<runtime_name>.py`): the connection cases; the agent loads every tool against a real local MCP server, without an LLM call; `invoke` with fake agents (reused across calls, dropped after a failure); `main()`.
-- By hand: `mise run ac-local-<slug>-call` sends the runtime's sample payload through the tested agent client of OP-8-1 (new).
+- `mise run ac-local-<slug>`: frees its port, then uvicorn serves `<package_name>.runtimes.<runtime_name>:app` with `MCP_URL` pointing at the local MCP server's port; the model is called with the environment's profile and region through `one.new_boto_ses`. Start the MCP server first (OP-3-3).
+- Tests: the agent loads every tool against a real local MCP server, without a model call; `ProcessAgent` with fake agents; `invoke`; `main()`.
+- By hand: `mise run ac-local-<slug>-call` sends a sample prompt through the tested client `<package_name>/devtools/agent_client.py` (optionally with `--session-id`).
 
 ---
 
@@ -438,12 +432,12 @@ A change that breaks this design changes this file in the same change. A fact a 
 | # | Today | Design | OP |
 | :--- | :--- | :--- | :--- |
 | R1 | done in OP-3: `runtimes/__init__.py` states the layer rule. Was: it said the runtimes never import config or `one`; both do | the layer rule of section 2: layer 1 never does, layers 2 and 3 do | OP-3-2, OP-4-2 |
-| R2 | `FASTMCP_PORT` done in OP-3 (`runtimes/common.py`). Left: `MCP_URL`, the default local MCP URL, the `bind()` ARN variable are literals in the modules (the URL twice). They are not runtime signals (OP-1 is done: its signals are in `constants.py`) | one documented constant each, in the module of the OP that owns it | OP-3-2, OP-4-2 |
-| R3 | the startup print moved to `runtimes/common.py` in OP-3. Left: SigV4, ARN to URL, MCP lookup order, `strip_thinking` sit in the agent module | the shared module of OP-4-2; tag stripping as layer 1 of OP-4-1 | OP-4 |
-| R4 | the prompt and the post-processing live in the runtime module | layer 1, no `strands` import | OP-4-1 |
+| R2 | done in OP-3 and OP-4: `FASTMCP_PORT` and `LOCAL_MCP_URL` in `runtimes/common.py`, `MCP_URL` and the `bind()` ARN variable (`get_runtime_arn_env_var`) in `runtimes/mcp_connection.py` | one documented constant each, in the module of the OP that owns it | OP-3-2, OP-4-2 |
+| R3 | done in OP-4: SigV4, ARN to URL, the lookup order in `runtimes/mcp_connection.py`; `strip_thinking`, `ProcessAgent`, the startup print in `runtimes/common.py` | the shared module of OP-4-2; tag stripping as layer 1 of OP-4-1 | OP-4 |
+| R4 | done in OP-4: the prompt and the own tools in `<domain>/<agent_name>.py`. Was: in the runtime module | layer 1, no `strands` import | OP-4-1 |
 | R5 | the registry has name, module, protocol only; ports in `mise.toml [env]`, sample calls in scripts and `curl` | slug, port, sample call in the registry | OP-5-2 |
-| R6 | `ac-local-*`, `ac-dev-*`, the call tasks, `ac-invoke-dev-agent` are hand-written, with runtime names, module paths, `us-east-1`, and the dev profile inline | generated per runtime (and environment), region and profile from the environment | OP-9-4 |
-| R7 | the MCP client is done in OP-3 (`devtools/mcp_client.py`, tested). Left: the agent call is `curl` | one tested client module; scripts are thin EPs | OP-8-1 |
+| R6 | `ac-local-*`, `ac-dev-*`, the call tasks, `ac-invoke-dev-agent` are hand-written, with runtime names and module paths inline; `ac-dev-*` and `ac-invoke-dev-agent` still set `us-east-1` and the dev profile (`ac-local-agent` no longer does, OP-4) | generated per runtime (and environment), region and profile from the environment | OP-9-4 |
+| R7 | done for local calls: `devtools/mcp_client.py` (OP-3), `devtools/agent_client.py` (OP-4). Left: calling a deployed runtime (SigV4, `InvokeAgentRuntime`) | one tested client module; scripts are thin EPs | OP-8-1 |
 | R8 | done in OP-3: `local_port.py` and the MCP client are in `<package_name>/devtools/`, dev tooling never copied into a runtime | | OP-3-3 |
 | R9 | the AgentCore task generation is inside `cdk/mise_tasks.py` | its own module, called by `gen-env-tasks` | OP-6, OP-7 |
 | R10 | `ac-check-wheels` is run by path | a task | OP-5-3 |
@@ -458,7 +452,7 @@ The references, one per OP, numbered `<OP><part>` so the file order is the OP or
 | `10-code-runtime.md` | OP-1 | done | `06` section 1 |
 | `20-centralized-config.md` | OP-2 | done | `06` section 3, `05` sections 1 and 2 |
 | `30-mcp-runtime.md` | OP-3 | done | `09` (deleted), `10` sections 2 and 3 |
-| `40-agent-runtime.md` | OP-4 | to write | `08`, `02` section 4.2, `10` |
+| `40-agent-runtime.md` | OP-4 | done | `08` (deleted), `02` section 4.2 |
 | `50-` to `53-` | OP-5, one per layer | to write | `03`, `07`, `04`, `10` |
 | `60-deploy.md` | OP-6 | to write | `07`, `11` sections 1 to 3 |
 | `70-teardown.md` | OP-7 | to write | `11` sections 5 and 6 |

@@ -105,20 +105,16 @@ description = "🔌 Call the local PowerPlantMcp server (start it first with ac-
 run = """.venv/bin/python .mise/tasks/ac-local-mcp-call.py --url http://localhost:$LOCAL_MCP_PORT/mcp --tool get_site --arguments '{"site_id": "S-03"}'"""
 
 [tasks.ac-local-agent]
-description = "🤖 Run the SiteAgent agent locally on http://localhost:$LOCAL_AGENT_PORT (needs ac-local-mcp running, and Bedrock access with the dev profile)"
+description = "🤖 Run the SiteAgent agent locally on http://localhost:$LOCAL_AGENT_PORT (needs ac-local-mcp running; calls Bedrock with the profile and region of ENV_NAME)"
 run = [
     ".venv/bin/python .mise/tasks/free-port.py --port $LOCAL_AGENT_PORT",
-    "AWS_PROFILE=$AWS_PROFILE_FOR_DEV AWS_REGION=us-east-1 MCP_URL=http://localhost:$LOCAL_MCP_PORT/mcp .venv/bin/python -m uvicorn cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent:app --host 127.0.0.1 --port $LOCAL_AGENT_PORT",
+    "MCP_URL=http://localhost:$LOCAL_MCP_PORT/mcp .venv/bin/python -m uvicorn cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent:app --host 127.0.0.1 --port $LOCAL_AGENT_PORT",
 ]
 depends = ["inst"]
 
 [tasks.ac-local-agent-call]
 description = "🤖 Ask the local SiteAgent the demo question (start the MCP server and the agent first, with ac-local-* or ac-dev-*)"
-run = """
-curl -s -X POST http://localhost:$LOCAL_AGENT_PORT/invocations -H 'Content-Type: application/json' \
-  -d '{"prompt": "Can we send someone to inspect the turbines at site S-03 tomorrow? Who is assigned there?"}'
-echo
-"""
+run = """.venv/bin/python .mise/tasks/ac-local-agent-call.py --url http://localhost:$LOCAL_AGENT_PORT --prompt 'Can we send someone to inspect the turbines at site S-03 tomorrow? Who is assigned there?'"""
 
 # AgentCore CLI project (agentcore/); every task deploys or builds ALL runtimes of the project
 [tasks.ac-gen]

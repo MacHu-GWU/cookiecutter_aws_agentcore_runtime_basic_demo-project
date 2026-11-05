@@ -34,10 +34,9 @@ class OneBotoSesMixin:
     Lazily built boto session and AWS clients.
     """
 
-    @cached_property
-    def bsm(self: One) -> BotoSesManager:
+    def get_bsm_kwargs(self: One) -> dict:
         """
-        The boto session of the current environment; creating it makes no AWS call.
+        The arguments of the boto session of the current environment:
 
         - Region: that of the config, except on the AgentCore runtimes, which
           read the config through this session: there it is ``AWS_REGION``, set
@@ -65,7 +64,25 @@ class OneBotoSesMixin:
             profile_name = os.environ.get(env_var, "")
             if profile_name:
                 kwargs["profile_name"] = profile_name
-        return BotoSesManager(**kwargs)
+        return kwargs
+
+    @cached_property
+    def bsm(self: One) -> BotoSesManager:
+        """
+        The boto session of the current environment, built once with
+        :meth:`get_bsm_kwargs`; creating it makes no AWS call.
+        """
+        return BotoSesManager(**self.get_bsm_kwargs())
+
+    def new_boto_ses(self: One) -> boto3.Session:
+        """
+        A new boto3 session of the current environment on every call, with the
+        same region and credential rules as :attr:`bsm`, and credentials
+        resolved now. An agent runtime builds its agent with one on its first
+        invocation, so its credentials are those of the running session, never
+        ones resolved before (an AgentCore microVM is restored from a snapshot).
+        """
+        return BotoSesManager(**self.get_bsm_kwargs()).boto_ses
 
     @cached_property
     def boto_ses(self: One) -> boto3.Session:  # pragma: no cover
