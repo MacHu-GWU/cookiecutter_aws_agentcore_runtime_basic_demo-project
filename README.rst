@@ -1,12 +1,12 @@
 
-.. image:: https://readthedocs.org/projects/cookiecutter-aws-agentcore-runtime-basic-demo/badge/?version=latest
+.. .. image:: https://readthedocs.org/projects/cookiecutter-aws-agentcore-runtime-basic-demo/badge/?version=latest
     :target: https://cookiecutter-aws-agentcore-runtime-basic-demo.readthedocs.io/en/latest/
     :alt: Documentation Status
 
-.. image:: https://github.com/MacHu-GWU/cookiecutter_aws_agentcore_runtime_basic_demo-project/actions/workflows/main.yml/badge.svg
+.. .. image:: https://github.com/MacHu-GWU/cookiecutter_aws_agentcore_runtime_basic_demo-project/actions/workflows/main.yml/badge.svg
     :target: https://github.com/MacHu-GWU/cookiecutter_aws_agentcore_runtime_basic_demo-project/actions?query=workflow:CI
 
-.. image:: https://codecov.io/gh/MacHu-GWU/cookiecutter_aws_agentcore_runtime_basic_demo-project/branch/main/graph/badge.svg
+.. .. image:: https://codecov.io/gh/MacHu-GWU/cookiecutter_aws_agentcore_runtime_basic_demo-project/branch/main/graph/badge.svg
     :target: https://codecov.io/gh/MacHu-GWU/cookiecutter_aws_agentcore_runtime_basic_demo-project
 
 .. image:: https://img.shields.io/badge/✍️_Release_History!--None.svg?style=social&logo=github
@@ -32,7 +32,7 @@
 
 Welcome to ``cookiecutter_aws_agentcore_runtime_basic_demo`` Documentation
 ==============================================================================
-.. image:: https://cookiecutter-aws-agentcore-runtime-basic-demo.readthedocs.io/en/latest/_static/cookiecutter_aws_agentcore_runtime_basic_demo-logo.png
+.. .. image:: https://cookiecutter-aws-agentcore-runtime-basic-demo.readthedocs.io/en/latest/_static/cookiecutter_aws_agentcore_runtime_basic_demo-logo.png
     :target: https://cookiecutter-aws-agentcore-runtime-basic-demo.readthedocs.io/en/latest/
 
 A seed project for a multi-environment AWS Bedrock AgentCore Runtime code base (``dev``, ``tst``, ``prd``), with two sample runtimes that work together: ``PowerPlantMcp``, an MCP server, and ``SiteAgent``, an agent that calls it. The AgentCore CLI deploys the runtimes from ``agentcore/``; what they depend on, and every other AWS resource, is a Python CDK stack. How it is organized and how to work with it: the ``aws-agentcore-base`` skill (runtimes) and the ``pywf-aws-cdk-base`` skill (config, credentials, stacks) in ``.claude/skills/``.
