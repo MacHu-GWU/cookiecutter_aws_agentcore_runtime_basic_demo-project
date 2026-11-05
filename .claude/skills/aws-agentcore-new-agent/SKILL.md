@@ -5,16 +5,16 @@ description: "Add a new agent runtime (protocol HTTP, Strands on BedrockAgentCor
 
 Add one agent runtime to the project, end to end, following the patterns of `SiteAgent`.
 
-Read ../aws-agentcore-base/SKILL.md, then:
-- ../aws-agentcore-base/references/03-project-layout.md
-- ../aws-agentcore-base/references/04-packaging.md
-- ../aws-agentcore-base/references/05-naming.md
-- ../aws-agentcore-base/references/06-runtime-and-config.md
-- ../aws-agentcore-base/references/07-agentcore-vs-other-resources.md
-- ../aws-agentcore-base/references/08-agent-to-mcp.md
-- ../aws-agentcore-base/references/10-local-dev.md
+Read ../aws-agentcore-base/SKILL.md, then ../aws-agentcore-base/references/10-code-runtime.md (OP-1), then the legacy references below. The base references are being rewritten one OP at a time: until then, a short citation such as `05` or `10` in this file means the legacy file of that number, `references/legacy/NN-*.md`, not the new reference with the same number.
+- ../aws-agentcore-base/references/legacy/03-project-layout.md
+- ../aws-agentcore-base/references/legacy/04-packaging.md
+- ../aws-agentcore-base/references/legacy/05-naming.md
+- ../aws-agentcore-base/references/legacy/06-runtime-and-config.md
+- ../aws-agentcore-base/references/legacy/07-agentcore-vs-other-resources.md
+- ../aws-agentcore-base/references/legacy/08-agent-to-mcp.md
+- ../aws-agentcore-base/references/legacy/10-local-dev.md
 
-Read ../aws-agentcore-base/references/02-runtime-sessions-and-cold-starts.md when latency matters, and ../aws-agentcore-base/references/11-deploy-and-troubleshoot.md before a deploy. Use the `aws-agentcore-new-mcp` skill first if the agent needs an MCP runtime that does not exist yet. For new modules and tests, follow the `pywf-oss-add-module` and `pywf-oss-write-test` skills.
+Read ../aws-agentcore-base/references/legacy/02-runtime-sessions-and-cold-starts.md when latency matters, and ../aws-agentcore-base/references/legacy/11-deploy-and-troubleshoot.md before a deploy. Use the `aws-agentcore-new-mcp` skill first if the agent needs an MCP runtime that does not exist yet. For new modules and tests, follow the `pywf-oss-add-module` and `pywf-oss-write-test` skills.
 
 ## 1. Agree on the design first
 

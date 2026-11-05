@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 
-from cookiecutter_aws_agentcore_runtime_basic_demo.cdk.stacks.alerts_stack_exports import STACK_NAMES
-from cookiecutter_aws_agentcore_runtime_basic_demo.cdk.stacks.alerts_stack_exports import AlertsStackExports
+from cookiecutter_aws_agentcore_runtime_basic_demo.cdk.stacks.alerts_stack_exports import (
+    STACK_NAMES,
+)
+from cookiecutter_aws_agentcore_runtime_basic_demo.cdk.stacks.alerts_stack_exports import (
+    AlertsStackExports,
+)
 
 from cookiecutter_aws_agentcore_runtime_basic_demo.one.api import one
 

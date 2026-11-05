@@ -7,7 +7,9 @@ and cross-stack references are wired up; what each resource looks like is not
 checked here (the names are checked in ``tests/config/test_config_config_01_name.py``).
 """
 
-from cookiecutter_aws_agentcore_runtime_basic_demo.cdk.stacks.alerts_stack import AlertsStack
+from cookiecutter_aws_agentcore_runtime_basic_demo.cdk.stacks.alerts_stack import (
+    AlertsStack,
+)
 
 import aws_cdk as cdk
 

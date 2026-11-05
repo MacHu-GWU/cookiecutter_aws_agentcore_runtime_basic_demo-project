@@ -4,7 +4,9 @@ from cookiecutter_aws_agentcore_runtime_basic_demo.cdk.stacks.publisher_stack.st
     PublisherStackSsmMixin,
 )
 
-from cookiecutter_aws_agentcore_runtime_basic_demo.cdk.stacks.publisher_stack.stack import PublisherStack
+from cookiecutter_aws_agentcore_runtime_basic_demo.cdk.stacks.publisher_stack.stack import (
+    PublisherStack,
+)
 
 
 def test():

@@ -23,6 +23,7 @@ from pathlib import Path
 
 from ..env import ENV_NAME_VAR
 from ..constants import IS_AGENTCORE_RUNTIME_VAR
+from ..constants import IS_AGENTCORE_RUNTIME_VALUE
 from ..constants import CONFIG_SSM_PARAM_NAME_VAR
 from ..config.api import Config
 
@@ -70,7 +71,7 @@ def get_runtime_env_vars(config: Config) -> dict[str, str]:
     environment, and the config parameter to read.
     """
     return {
-        IS_AGENTCORE_RUNTIME_VAR: "true",
+        IS_AGENTCORE_RUNTIME_VAR: IS_AGENTCORE_RUNTIME_VALUE,
         ENV_NAME_VAR: config.env_name,
         CONFIG_SSM_PARAM_NAME_VAR: config.ssm_param_name_config,
     }
