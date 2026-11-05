@@ -17,13 +17,8 @@ import httpx
 
 AGENT_URL_VAR = "AGENT_URL"
 """
-The base URL of the agent server to call when ``--url`` is not given.
-"""
-
-DEFAULT_AGENT_URL = "http://localhost:8080"
-"""
-The base URL when neither ``--url`` nor :data:`AGENT_URL_VAR` is given: the
-port AgentCore Runtime sends HTTP requests to.
+The base URL of the agent server to call when ``--url`` is not given, such as
+``AGENT_URL=http://localhost:18732``.
 """
 
 SESSION_ID_HEADER = "X-Amzn-Bedrock-AgentCore-Runtime-Session-Id"
@@ -67,10 +62,12 @@ def main(args: list[str] | None = None) -> int:
     the agent's answer. Exit 1 if the server answers with an error.
     """
     parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
+    url = os.environ.get(AGENT_URL_VAR)
     parser.add_argument(
         "--url",
-        default=os.environ.get(AGENT_URL_VAR, DEFAULT_AGENT_URL),
-        help=f"the base URL (default: ${AGENT_URL_VAR}, else {DEFAULT_AGENT_URL})",
+        default=url,
+        required=url is None,
+        help=f"the base URL (default: ${AGENT_URL_VAR})",
     )
     parser.add_argument("--prompt", required=True, help="what to ask the agent")
     parser.add_argument(

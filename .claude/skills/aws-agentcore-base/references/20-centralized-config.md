@@ -38,7 +38,7 @@ config/*.json5 ──► Config (one environment, validated)
 
 ## 2. What the config holds for AgentCore
 
-**Values**, fields of `Config`, one per line, each with a `#:` comment:
+**Values**, fields of `Config`:
 
 | Field | What | Where |
 | :--- | :--- | :--- |

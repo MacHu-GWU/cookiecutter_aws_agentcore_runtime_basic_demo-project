@@ -2,9 +2,10 @@
 
 """
 How an agent runtime reaches an MCP runtime: locally, at the URL of its own
-environment variable, without auth;
-deployed, at the invocation URL of the MCP runtime's ARN, every request signed
-with SigV4.
+environment variable, without auth; deployed, at the invocation URL of the MCP
+runtime's ARN, every request signed with SigV4. A client of a deployed MCP
+runtime (``devtools/``, ``tests_int/``) uses the same
+:func:`get_deployed_mcp_connection`.
 
 The ARN comes from ``bind()`` in ``agentcore/cdk/lib/cdk-stack.ts``:
 ``runtime('<Mcp>').bind(runtime('<Agent>'))`` grants the agent's execution role
@@ -21,8 +22,6 @@ import urllib.parse
 import httpx
 from botocore.auth import SigV4Auth
 from botocore.awsrequest import AWSRequest
-
-from .common import LOCAL_MCP_URL
 
 if T.TYPE_CHECKING:  # pragma: no cover
     import boto3
@@ -105,31 +104,49 @@ class AwsSigV4Auth(httpx.Auth):
         yield request
 
 
+def get_deployed_mcp_connection(
+    runtime_arn: str,
+    boto_session: boto3.Session,
+) -> tuple[str, AwsSigV4Auth]:
+    """
+    The MCP URL of the deployed MCP runtime ``runtime_arn``, and the SigV4 auth
+    that signs each request with the credentials of ``boto_session``, in the
+    region of the ARN.
+    """
+    auth = AwsSigV4Auth(
+        credentials=boto_session.get_credentials(),
+        region=get_arn_region(runtime_arn),
+    )
+    return get_runtime_mcp_url(runtime_arn), auth
+
+
 def get_mcp_connection(
     runtime_name: str,
     boto_session: boto3.Session,
-    default_url: str = LOCAL_MCP_URL,
 ) -> tuple[str, httpx.Auth | None]:
     """
     Where an agent reaches the MCP runtime ``runtime_name`` (its name in
     ``agentcore.json``), as ``(url, auth)``, in this order:
 
     1. :func:`get_local_mcp_url_env_var` is set (local runs): that URL, no auth.
-    2. :func:`get_runtime_arn_env_var` is set (deployed, by ``bind()``): the
-       runtime's MCP URL, signed with the credentials of ``boto_session``.
-    3. Otherwise ``default_url``, no auth.
+    2. :func:`get_runtime_arn_env_var` is set (deployed, by ``bind()``):
+       :func:`get_deployed_mcp_connection`.
 
     :param boto_session: whose credentials sign the requests; only read in case 2.
+
+    :raises ValueError: neither is set. Deployed, the ``bind()`` line of this
+        pair is missing in ``cdk-stack.ts``; locally, the agent was started
+        without the ``ac-local-<slug>`` / ``ac-dev-<slug>`` task. Failing here
+        names the cause; a default URL would fail later, as a connection error.
     """
     url_env_var = get_local_mcp_url_env_var(runtime_name)
     arn_env_var = get_runtime_arn_env_var(runtime_name)
     if url_env_var in os.environ:
         return os.environ[url_env_var], None
     if arn_env_var in os.environ:
-        runtime_arn = os.environ[arn_env_var]
-        auth = AwsSigV4Auth(
-            credentials=boto_session.get_credentials(),
-            region=get_arn_region(runtime_arn),
-        )
-        return get_runtime_mcp_url(runtime_arn), auth
-    return default_url, None
+        return get_deployed_mcp_connection(os.environ[arn_env_var], boto_session)
+    raise ValueError(
+        f"no MCP connection for {runtime_name!r}: set {url_env_var} (local), or "
+        f"bind {runtime_name!r} to this agent in agentcore/cdk/lib/cdk-stack.ts, "
+        f"which sets {arn_env_var} (deployed)"
+    )

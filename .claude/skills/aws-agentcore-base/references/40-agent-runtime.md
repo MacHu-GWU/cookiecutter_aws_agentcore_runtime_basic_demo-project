@@ -130,9 +130,9 @@ It grants the agent's execution role `bedrock-agentcore:InvokeAgentRuntime` on t
 | :--- | :--- | :--- | :--- |
 | 1 | `MCP_URL_<NAME>` (`get_local_mcp_url_env_var`) is set: the local tasks point the agent at a local server of that MCP runtime | its value | none |
 | 2 | `AGENTCORE_RUNTIME_<NAME>_ARN` is set: deployed | `get_runtime_mcp_url(arn)` | `AwsSigV4Auth` |
-| 3 | otherwise | `LOCAL_MCP_URL`, `http://localhost:8000/mcp` | none |
+| 3 | otherwise | none: `ValueError`, naming both variables and the missing `bind()` line | |
 
-Each MCP runtime has its own two variables, so an agent with several MCP servers calls it once per server, by name.
+Each MCP runtime has its own two variables, so an agent with several MCP servers calls it once per server, by name. There is no default URL on purpose: a missing `bind()` line fails at the first invocation with that message, not as a connection error to a server that is not there. Row 2 is `get_deployed_mcp_connection(arn, boto_session)`, which a client of a deployed MCP runtime uses too.
 
 **The deployed URL**, the region being the 4th field of the ARN:
 

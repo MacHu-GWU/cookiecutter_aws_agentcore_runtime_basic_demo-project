@@ -59,7 +59,7 @@ def get_order(engine: sa.Engine, order_id: str) -> OrderDetail:
 - **Returns a contract model, not a storage row or a dict.** A table and an answer differ even when they share fields: the answer may leave out columns, add related rows, or reshape values, and the storage may change without changing the contract.
 - **Errors are `ValueError`** with a message the LLM can act on; the server turns it into a tool error.
 
-**A result model:** a Pydantic `BaseModel`, `model_config = ConfigDict(from_attributes=True)` so `Model.model_validate(row)` builds it from a storage row (related rows included, read while the session is open), and `Field(description=...)` on every field, one per line between `# fmt: off` / `# fmt: on`. The server turns the return type into the tool's output schema, so these descriptions are what the LLM reads about each field.
+**A result model:** a Pydantic `BaseModel`, `model_config = ConfigDict(from_attributes=True)` so `Model.model_validate(row)` builds it from a storage row (related rows included, read while the session is open), and `Field(description=...)` on every field. The server turns the return type into the tool's output schema, so these descriptions are what the LLM reads about each field.
 
 **The import rule:** this code is copied into the runtime zip, so it imports at module level only the standard library and the `agentcore` dependency group.
 

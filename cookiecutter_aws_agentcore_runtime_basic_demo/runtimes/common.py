@@ -44,12 +44,6 @@ MCP_TRANSPORT = "streamable-http"
 The MCP transport AgentCore Runtime speaks.
 """
 
-LOCAL_MCP_URL = f"http://localhost:{MCP_DEFAULT_PORT}{MCP_PATH}"
-"""
-The URL of a local MCP server on the default port, such as one run by
-``agentcore dev`` without ``--port``; the last resort of a client.
-"""
-
 
 def get_mcp_port() -> int:
     """

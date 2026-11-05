@@ -1,5 +1,5 @@
 ---
-description: "Operation-oriented design (OOD) of an AgentCore project made from this template: the OPs from code runtime detection, the central config, MCP and agent runtimes (local first, pure functions with injected dependencies), the AgentCore CLI project, deploy, teardown, invoke and observe, to toolchain maintenance, each with its EP, FP, and CMD, plus the record of the refactor that brought the code to it. Read before refactoring an AgentCore module, before moving a file between OPs, or when deciding which OP a new piece of AgentCore work belongs to."
+description: "Operation-oriented design (OOD) of an AgentCore project made from this template: the OPs from code runtime detection, the central config, MCP and agent runtimes (local first, pure functions with injected dependencies), the AgentCore CLI project, deploy, teardown, invoke and observe, to toolchain maintenance, each with its EP, FP, and CMD, and the reference that implements each. Read before refactoring an AgentCore module, before moving a file between OPs, or when deciding which OP a new piece of AgentCore work belongs to."
 ---
 
 # Operation-Oriented Design of an AgentCore Project
@@ -37,7 +37,6 @@ The document is a template: it names no business domain of a particular project.
 
 ### 0.3 Marks
 
-- **(new)**: a file, function, or task the design asks for that the code does not have yet. None is left; section 10 records how the code reached this design.
 - **Asks first**: changes AWS; run only after the user's yes, one environment per yes.
 
 ---
@@ -104,7 +103,7 @@ The same code runs in four places, and has to know which one it is in to pick it
 | :--- | :--- | :--- | :--- |
 | `local` | the package from the repo: tests, scripts, `ac-local-*` servers | a developer | the local profile of the environment |
 | `agentcore_local` | the packaged copy in `app/<Runtime>/`, simulating AgentCore | `agentcore dev` (`ac-dev-*`) | the local profile |
-| `ci` | tests and deploys on GitHub Actions | the CI runner | the runner's environment or assumed role |
+| `ci` | tests on a CI runner, such as GitHub Actions; they run as `local` (`tests/conftest.py`), and loading the config is not supported here | the CI runner | the runner's environment or assumed role |
 | `agentcore` | the deployed runtime | AgentCore Runtime | the runtime's execution role |
 
 ### OP-1-2 How the code knows: the signals
@@ -163,8 +162,9 @@ To add one: the field or property, its values in `config/*.json5` and `config/ex
 
 | Runtime (OP-1) | Config from |
 | :--- | :--- |
-| `local`, `ci` | `config/*.json5` |
+| `local` | `config/*.json5` |
 | `agentcore_local`, `agentcore` | the SSM parameter named by `CONFIG_SSM_PARAM_NAME` (an `envVars` entry), written by `config-deploy-<env>` |
+| `ci` | none: `NotImplementedError` (deploys run from a developer's machine) |
 
 Why SSM and not `envVars` or a copy in the zip: secrets would sit in plain text on the runtime or in the CodeZip. Cost: one `GetParameter` per process, so one per session.
 
@@ -229,7 +229,7 @@ An agent is a prompt, a model, its own tools, and the MCP servers it uses. Follo
 - `build_agent()` gives it the dependencies of the process: `one.new_boto_ses()` (a new session, credentials resolved on the first invocation, never at import time), the model ID of the config, the MCP connection.
 - `agent = ProcessAgent(build_agent)` (`runtimes/common.py`): one agent per process, so per session; its MCP session stays open and the conversation is remembered; one call at a time; dropped after a failure.
 - `BedrockAgentCoreApp` with `@app.entrypoint invoke(payload)`: the AgentCore HTTP contract; `strip_thinking` cleans the answer.
-- Where its MCP servers are (`runtimes/mcp_connection.py`, `get_mcp_connection(<Mcp>, boto_session)`): `MCP_URL_<MCP NAME>` if set, else the ARN in `get_runtime_arn_env_var(<Mcp>)` (set by `bind()`, OP-5-1) turned into the invocation URL and signed with `AwsSigV4Auth`, else `LOCAL_MCP_URL`.
+- Where its MCP servers are (`runtimes/mcp_connection.py`, `get_mcp_connection(<Mcp>, boto_session)`): `MCP_URL_<MCP NAME>` if set, else the ARN in `get_runtime_arn_env_var(<Mcp>)` (set by `bind()`, OP-5-1) turned into the invocation URL and signed with `AwsSigV4Auth` (`get_deployed_mcp_connection`), else a `ValueError` that names the missing `bind()` line.
 - `main()`: `print_config_source()`, then `app.run()`.
 
 ### OP-4-3 Run and test it locally
@@ -264,7 +264,7 @@ The rule: AgentCore resources live in this project; anything else the runtimes u
 
 ### OP-5-2 Layer 2: the AgentCore config, from the project config
 
-- The **runtime registry** `get_runtime_specs()` in `agentcore_project/registry.py` is the one place a runtime is declared: name, module, protocol (`RuntimeProtocolEnum.MCP` or `HTTP`). Everything per runtime is derived from it: `agentcore.json`, `app/<Runtime>/`; and, once tasks are generated per runtime (OP-9-4), its slug, local port, and sample call too.
+- The **runtime registry** `get_runtime_specs(config)` in `agentcore_project/registry.py` is the one place a runtime is declared: name, module, protocol (`RuntimeProtocolEnum.MCP` or `HTTP`). Everything per runtime is derived from it: `agentcore.json`, `app/<Runtime>/`, and its generated tasks with their slug, local port, and sample call (OP-9-4).
 - `build_agentcore_json` (`agentcore_project/project_files.py`): per runtime `CodeZip`, `main.py`, `app/<Runtime>`, Python version, protocol, the `envVars` of OP-1-2 and OP-2-3 (`IS_AGENTCORE_RUNTIME`, `ENV_NAME`, `CONFIG_SSM_PARAM_NAME`), `additionalPolicies` from the config.
 - `build_aws_targets_json`: one target named after the environment, account and region from the config.
 - `build_empty_agentcore_json`: a project that declares nothing, for teardown (OP-7-1).
@@ -296,7 +296,7 @@ Different from OP-3-3 and OP-4-3: this runs the **packaged** copy, as close to d
 
 Put an environment's AgentCore part into AWS, in dependency order, then prove it works there. **Every step asks first.**
 
-- EP: `<package_name>/agentcore_project/mise_tasks.py`, which renders the AgentCore tasks of every environment (split from `cdk/mise_tasks.py`)
+- EP: `<package_name>/agentcore_project/mise_tasks.py`, which renders the AgentCore tasks of every environment
 - FP: `<package_name>/cdk/stacks/agentcore_deps_stack.py`, `<package_name>/one/one_04_agentcore_deps.py` (the check before deploy), `<package_name>/agentcore_project/mise_tasks.py`, `sample_payload` of the registry, `.mise/tasks/{ac-check-deps,ac-gen,ac-check-wheels}.py`, the `<env-tasks>` block of `mise.toml`, `agentcore/.cli/deployed-state.json`; the config step is OP-2's
 - CMD: `mise run ac-chain-up-<env>`, or a single step; `mise run ac-test-<env>`; free: `mise run -n <task>`, `cdk-plan-<env>-agentcore-deps-stack`, `gen-env-tasks`
 - Docs: `60-deploy.md`
@@ -328,7 +328,7 @@ The `agentcore_deps` CDK stack: the managed policy attached to every execution r
 - `mise run ac-status-<env>`: `agentcore status`, what is deployed.
 - `mise run ac-invoke-<env>-<slug>`: `agentcore invoke` of one deployed runtime with the `sample_payload` of its registry entry (a JSON-RPC request for an MCP runtime); `SESSION_ID` adds `--session-id`.
 - `mise run ac-test-<env>`: the status, then every runtime invoked once.
-- Still open (OP-8): a Python client and `tests_int/` checks that call the deployed runtimes without the CLI.
+- Without the CLI, from Python: OP-8.
 - A healthy start logs the config source line of `main()` (OP-3-2, OP-4-2).
 
 ---
@@ -366,8 +366,8 @@ The CLI's own teardown: `agentcore deploy --yes` of a project that declares noth
 
 Call the deployed runtimes from a client program, keep the conversation and the microVMs warm, and find out what happened.
 
-- EP: `<package_name>/devtools/agentcore_client.py`: find a runtime's ARN, `InvokeAgentRuntime` with a session ID, the SigV4 connection of a deployed MCP runtime (used with `devtools/mcp_client.py`), the log group
-- FP: `<package_name>/devtools/{agentcore_client,mcp_client,quick_links}.py`, the AgentCore clients of `one/one_02_boto_ses.py`, the console URL helpers of `config_01_name.py`, the `ac-logs` step of `agentcore_project/mise_tasks.py`, `QUICK_LINKS.md`, `tests_int/test_agentcore_runtimes.py`
+- EP: `<package_name>/devtools/agentcore_client.py`: find a runtime's ARN, `InvokeAgentRuntime` with a session ID, the log group
+- FP: `<package_name>/devtools/{agentcore_client,mcp_client,quick_links}.py`, `get_deployed_mcp_connection` of `runtimes/mcp_connection.py` (OP-4-2), the AgentCore clients of `one/one_02_boto_ses.py`, the console URL helpers of `config_01_name.py`, the `ac-logs` step of `agentcore_project/mise_tasks.py`, `QUICK_LINKS.md`, `tests_int/test_agentcore_runtimes.py`
 - CMD: `mise run int-test` (needs a deploy), `mise run gen-quick-links` (reads AWS), `mise run ac-logs-<env>-<slug>`, `mise run ac-invoke-<env>-<slug>`
 - Docs: `80-invoke-and-observe.md`
 
@@ -378,7 +378,7 @@ One client per protocol, each taking a URL (or an ARN) and an auth, so the same 
 | Protocol | Local | Deployed |
 | :--- | :--- | :--- |
 | `HTTP` (agent) | `POST http://localhost:<port>/invocations` | `InvokeAgentRuntime` (boto3 `bedrock-agentcore`, or `agentcore invoke`) with a `runtimeSessionId` |
-| `MCP` | streamable HTTP client to `http://localhost:<port>/mcp` | the same client to the invocation URL of the ARN, signed with SigV4 (the shared module of OP-4-2) |
+| `MCP` | streamable HTTP client to `http://localhost:<port>/mcp` | the same client to the invocation URL of the ARN, signed with SigV4 (`get_deployed_mcp_connection` of OP-4-2) |
 
 ### OP-8-2 Sessions
 
@@ -391,8 +391,8 @@ One client per protocol, each taking a URL (or an ARN) and an auth, so the same 
 
 - Log group `/aws/bedrock-agentcore/runtimes/<runtime ID>-DEFAULT`, one stream per session: a new stream per call means a new (cold) session. The runtime ID is known only after a deploy: `agentcore status`, the stack's console URL, or `describe-log-groups` by the physical-name prefix.
 - `ac-logs-<env>-<slug>`: `agentcore logs runtime`, the recent logs of one runtime (read-only).
-- Latency: the T1–T5 breakdown of `02`; time the same prompt three times with one session ID.
-- Failures met so far, with fixes: the table of `11`. Add every new one.
+- Latency: the T1–T5 breakdown of `80`, section 3; time the same prompt three times with one session ID.
+- Failures met so far, with fixes: `80`, section 6 (invocation) and `60`, section 7 (deploy). Add every new one.
 
 ---
 
@@ -419,7 +419,7 @@ The `agentcore` dependency group is what every runtime installs: keep it small (
 
 ### OP-9-4 Runtimes and environments over time
 
-- Add a runtime: the invokers (section 1). Rename or remove one: its registry entry, its names in the config, its `bind()` lines and other agents' `mcp_runtimes`, then `gen-env-tasks` and `ac-gen`; the next deploy replaces or drops it.
+- Add a runtime: the invokers (section 1); the registry entry is `get_runtime_specs(config)`. Rename or remove one: its registry entry, its names in the config, its `bind()` lines and other agents' `mcp_runtimes`, then `gen-env-tasks` and `ac-gen`; the next deploy replaces or drops it.
 - Add an environment: `EnvNameEnum` (owned by `pywf-aws-cdk-base`), its config files, `mise run gen-env-tasks`.
 - `gen-env-tasks` renders the per-environment tasks (OP-6, OP-7, OP-8) and the per-runtime tasks (`ac-local-<slug>`, `ac-local-<slug>-call`, `ac-dev-<slug>`, `ac-invoke-<env>-<slug>`, `ac-logs-<env>-<slug>`) from `EnvNameEnum` and the registry (`local_port`, `sample_payload`, `mcp_runtimes`); no per-runtime task is hand-written.
 
@@ -429,24 +429,9 @@ A change that breaks this design changes this file in the same change. A fact a 
 
 ---
 
-## 10. Refactor record: how the code reached this design
+## 10. The references
 
-| # | Today | Design | OP |
-| :--- | :--- | :--- | :--- |
-| R1 | done in OP-3: `runtimes/__init__.py` states the layer rule. Was: it said the runtimes never import config or `one`; both do | the layer rule of section 2: layer 1 never does, layers 2 and 3 do | OP-3-2, OP-4-2 |
-| R2 | done in OP-3 and OP-4: `FASTMCP_PORT` and `LOCAL_MCP_URL` in `runtimes/common.py`, the local URL and the `bind()` ARN variable of each MCP runtime (`get_local_mcp_url_env_var`, `get_runtime_arn_env_var`) in `runtimes/mcp_connection.py` (OP-9) | one documented constant each, in the module of the OP that owns it | OP-3-2, OP-4-2 |
-| R3 | done in OP-4: SigV4, ARN to URL, the lookup order in `runtimes/mcp_connection.py`; `strip_thinking`, `ProcessAgent`, the startup print in `runtimes/common.py` | the shared module of OP-4-2; tag stripping as layer 1 of OP-4-1 | OP-4 |
-| R4 | done in OP-4: the prompt and the own tools in `<domain>/<agent_name>.py`. Was: in the runtime module | layer 1, no `strands` import | OP-4-1 |
-| R5 | done: the registry (`agentcore_project/registry.py`, OP-5) holds the slug and sample payload (OP-6), the local port and an agent's MCP runtimes (OP-9) | | OP-5-2, OP-9-4 |
-| R6 | done: every per-runtime task is generated (`ac-invoke`, `ac-logs` per environment in OP-6 and OP-8; `ac-local`, `ac-dev`, `-call` in OP-9, through `devtools/local_run.py`); the region and profile come from the environment | | OP-9-4 |
-| R7 | done: local calls in `devtools/mcp_client.py` (OP-3) and `devtools/agent_client.py` (OP-4); deployed calls in `devtools/agentcore_client.py` and the `auth` of `mcp_client` (OP-8) | one tested client module; scripts are thin EPs | OP-8-1 |
-| R8 | done in OP-3: `local_port.py` and the MCP client are in `<package_name>/devtools/`, dev tooling never copied into a runtime | | OP-3-3 |
-| R9 | done in OP-6: `agentcore_project/mise_tasks.py` renders the AgentCore tasks and the whole block; `cdk/mise_tasks.py` knows nothing of AgentCore | | OP-6, OP-7 |
-| R10 | done in OP-5: `mise run ac-check-wheels`; the loop moved into `codezip.check_codezip_installs` | | OP-5-3 |
-| R11 | done: the CLI tasks `ac-status-<env>`, `ac-invoke-<env>-<slug>`, `ac-test-<env>` (OP-6); `tests_int/test_agentcore_runtimes.py` through the Python client (OP-8) | | OP-6-4, OP-8 |
-| R12 | done: the references, once by topic, are rewritten one per OP, in OP order; `legacy/` is gone | | OP-9-5 |
-
-The references, one per OP, numbered `<OP><part>` so the file order is the OP order. Each opens with "Implements OP-N" and its EP, FP, CMD, and cites only lower numbers.
+One per OP, numbered `<OP><part>` so the file order is the OP order. Each opens with "Implements OP-N" and its EP, FP, CMD, and cites only lower numbers.
 
 | Reference | OP |
 | :--- | :--- |

@@ -3,7 +3,11 @@
 """
 A client of the deployed runtimes, for scripts and integration tests: find a
 runtime's ARN by its name, invoke an agent runtime with a runtime session ID,
-reach an MCP runtime over SigV4, and name a runtime's log group.
+and name a runtime's log group. To call a deployed MCP runtime, pass the URL and
+auth of
+:func:`~cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.mcp_connection.get_deployed_mcp_connection`
+(the same function a deployed agent uses) to
+:mod:`~cookiecutter_aws_agentcore_runtime_basic_demo.devtools.mcp_client`.
 
 Every function takes its AWS clients or session as arguments, such as those of
 ``one``; none builds its own.
@@ -16,12 +20,7 @@ import json
 import uuid
 import dataclasses
 
-from ..runtimes.mcp_connection import AwsSigV4Auth
-from ..runtimes.mcp_connection import get_arn_region
-from ..runtimes.mcp_connection import get_runtime_mcp_url
-
 if T.TYPE_CHECKING:  # pragma: no cover
-    import boto3
     from mypy_boto3_bedrock_agentcore.client import BedrockAgentCoreClient
     from mypy_boto3_bedrock_agentcore_control.client import (
         BedrockAgentCoreControlClient,
@@ -46,6 +45,18 @@ def new_session_id(prefix: str = "session") -> str:
     return session_id
 
 
+def iter_agent_runtimes(
+    control_client: BedrockAgentCoreControlClient,
+) -> T.Iterator[dict]:
+    """
+    Every runtime of the account and region, as ``ListAgentRuntimes`` lists
+    it, over every page.
+    """
+    paginator = control_client.get_paginator("list_agent_runtimes")
+    for page in paginator.paginate():
+        yield from page["agentRuntimes"]
+
+
 def find_runtime_arn(
     control_client: BedrockAgentCoreControlClient,
     physical_name: str,
@@ -57,11 +68,9 @@ def find_runtime_arn(
 
     :raises ValueError: no such runtime is deployed.
     """
-    paginator = control_client.get_paginator("list_agent_runtimes")
-    for page in paginator.paginate():
-        for runtime in page["agentRuntimes"]:
-            if runtime["agentRuntimeName"] == physical_name:
-                return runtime["agentRuntimeArn"]
+    for runtime in iter_agent_runtimes(control_client):
+        if runtime["agentRuntimeName"] == physical_name:
+            return runtime["agentRuntimeArn"]
     raise ValueError(f"no deployed runtime named {physical_name!r}")
 
 
@@ -97,20 +106,18 @@ def find_deployed_runtimes(
     """
     wanted = set(physical_names)
     found = {}
-    paginator = control_client.get_paginator("list_agent_runtimes")
-    for page in paginator.paginate():
-        for runtime in page["agentRuntimes"]:
-            name = runtime["agentRuntimeName"]
-            if name in wanted:
-                details = control_client.get_agent_runtime(
-                    agentRuntimeId=runtime["agentRuntimeId"]
-                )
-                found[name] = DeployedRuntime(
-                    physical_name=name,
-                    runtime_id=runtime["agentRuntimeId"],
-                    runtime_arn=runtime["agentRuntimeArn"],
-                    role_arn=details["roleArn"],
-                )
+    for runtime in iter_agent_runtimes(control_client):
+        name = runtime["agentRuntimeName"]
+        if name in wanted:
+            details = control_client.get_agent_runtime(
+                agentRuntimeId=runtime["agentRuntimeId"]
+            )
+            found[name] = DeployedRuntime(
+                physical_name=name,
+                runtime_id=runtime["agentRuntimeId"],
+                runtime_arn=runtime["agentRuntimeArn"],
+                role_arn=details["roleArn"],
+            )
     return found
 
 
@@ -158,19 +165,3 @@ def invoke_agent_runtime(
     response = client.invoke_agent_runtime(**kwargs)
     answer = json.loads(response["response"].read())
     return answer, response["runtimeSessionId"]
-
-
-def get_deployed_mcp_connection(
-    runtime_arn: str,
-    boto_session: boto3.Session,
-) -> tuple[str, AwsSigV4Auth]:
-    """
-    The MCP URL of the deployed MCP runtime ``runtime_arn`` and the SigV4 auth
-    to call it with the credentials of ``boto_session``: pass both to
-    :mod:`~cookiecutter_aws_agentcore_runtime_basic_demo.devtools.mcp_client`.
-    """
-    auth = AwsSigV4Auth(
-        credentials=boto_session.get_credentials(),
-        region=get_arn_region(runtime_arn),
-    )
-    return get_runtime_mcp_url(runtime_arn), auth

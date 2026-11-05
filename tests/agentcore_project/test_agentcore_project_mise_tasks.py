@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
 from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.mise_tasks import (
+    EnvStep,
+)
+from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.mise_tasks import (
     get_invoke_script,
 )
 from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.mise_tasks import (
@@ -39,9 +42,7 @@ def test_chains():
     the teardown chain the reverse, after a confirmation; every step prints a
     banner first.
     """
-    import tomllib
-
-    tasks = tomllib.loads(path_enum.path_mise_toml.read_text(encoding="utf-8"))["tasks"]
+    tasks = load_tasks()
     up = tasks["ac-chain-up-dev"]
     assert [item["task"] for item in up["run"] if isinstance(item, dict)] == [
         "config-deploy-dev",
@@ -165,6 +166,15 @@ def test_get_invoke_script():
     spec.sample_payload = {"prompt": "it's"}
     with pytest.raises(ValueError, match="single quote"):
         get_invoke_script(spec, "dev", "dev")
+
+
+def test_env_step_refuses_a_single_quote():
+    """The summary and the question are rendered inside single quotes."""
+    EnvStep(name="x", emoji="", summary="ok", confirm="ok?")
+    with pytest.raises(ValueError, match="single quote"):
+        EnvStep(name="x", emoji="", summary="it's")
+    with pytest.raises(ValueError, match="single quote"):
+        EnvStep(name="x", emoji="", summary="ok", confirm="Delete it's config?")
 
 
 if __name__ == "__main__":

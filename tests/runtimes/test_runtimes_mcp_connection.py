@@ -16,11 +16,15 @@ from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.mcp_connection impor
     AwsSigV4Auth,
 )
 from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.mcp_connection import (
+    get_deployed_mcp_connection,
+)
+from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.mcp_connection import (
     get_mcp_connection,
 )
 
 import boto3
 import httpx
+import pytest
 
 RUNTIME_ARN = (
     "arn:aws:bedrock-agentcore:us-west-2:111122223333:runtime/MyProject_dev_MyMcp-abc"
@@ -65,26 +69,32 @@ def test_aws_sigv4_auth():
     assert "X-Amz-Date" in signed.headers
 
 
+def test_get_deployed_mcp_connection():
+    """The runtime's URL, signed in the ARN's region, not the session's."""
+    url, auth = get_deployed_mcp_connection(RUNTIME_ARN, fake_session())
+    assert url == get_runtime_mcp_url(RUNTIME_ARN)
+    assert isinstance(auth, AwsSigV4Auth)
+    assert auth.region == "us-west-2"
+
+
 def test_get_mcp_connection(monkeypatch):
     monkeypatch.delenv(URL_VAR, raising=False)
     monkeypatch.delenv(ARN_VAR, raising=False)
     session = fake_session()
-    # nothing set: the default
-    assert get_mcp_connection("MyMcp", session) == ("http://localhost:8000/mcp", None)
-    # deployed: the runtime's URL, signed in the ARN's region
+    # nothing set: an error that names both variables and bind()
+    with pytest.raises(ValueError, match=f"{URL_VAR}.*bind.*{ARN_VAR}"):
+        get_mcp_connection("MyMcp", session)
+    # deployed: the runtime's URL, signed
     monkeypatch.setenv(ARN_VAR, RUNTIME_ARN)
     url, auth = get_mcp_connection("MyMcp", session)
     assert url == get_runtime_mcp_url(RUNTIME_ARN)
     assert isinstance(auth, AwsSigV4Auth)
-    assert auth.region == "us-west-2"
     # a local URL wins
     monkeypatch.setenv(URL_VAR, "http://localhost:18731/mcp")
     assert get_mcp_connection("MyMcp", session) == ("http://localhost:18731/mcp", None)
     # another MCP runtime's variables do not count
-    assert get_mcp_connection("OtherMcp", session) == (
-        "http://localhost:8000/mcp",
-        None,
-    )
+    with pytest.raises(ValueError, match="OtherMcp"):
+        get_mcp_connection("OtherMcp", session)
 
 
 if __name__ == "__main__":

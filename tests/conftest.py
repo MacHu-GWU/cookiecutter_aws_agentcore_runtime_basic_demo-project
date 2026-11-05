@@ -20,12 +20,16 @@ def local_runtime(monkeypatch):
     """
     Run every test as the local runtime, which loads the config from the local
     files, even on a CI runner (which sets ``CI``), and in the ``dev`` environment,
-    whatever ``ENV_NAME`` the shell or ``.env`` sets.
+    whatever ``ENV_NAME`` the shell or ``.env`` sets. The AWS profiles that mise
+    loads from ``.env`` are removed too, so no test signs in to a real account
+    by accident; a test that needs one sets it.
     """
     monkeypatch.delenv("CI", raising=False)
     monkeypatch.delenv("IS_AGENTCORE_RUNTIME", raising=False)
     monkeypatch.delenv("LOCAL_DEV", raising=False)
     monkeypatch.setenv("ENV_NAME", "dev")
+    for env_name in EnvNameEnum:
+        monkeypatch.delenv(f"AWS_PROFILE_FOR_{env_name.value.upper()}", raising=False)
 
 
 @pytest.fixture(scope="session", autouse=True)

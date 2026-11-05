@@ -3,8 +3,10 @@
 """
 The runtime registry: every AgentCore Runtime of the project, in one list.
 
-This is the one place a runtime is declared. ``agentcore/agentcore.json`` and
-each runtime's code directory ``app/<Runtime>/`` are generated from it.
+This is the one place a runtime is declared. Everything per runtime is derived
+from it: ``agentcore/agentcore.json``, its code directory ``app/<Runtime>/``,
+and, through ``mise run gen-env-tasks``, its local, dev, call, invoke, and logs
+tasks, with its local port and sample payload.
 """
 
 from __future__ import annotations

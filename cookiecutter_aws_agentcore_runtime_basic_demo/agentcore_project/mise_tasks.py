@@ -100,6 +100,12 @@ class EnvStep:
     confirm: str | None = dataclasses.field(default=None)  #: If set, the yes/no question asked before the script (``confirm.py``). No single quote.
     # fmt: on
 
+    def __post_init__(self):
+        # both are rendered inside single quotes in the task's shell script
+        for text in [self.summary, self.confirm or ""]:
+            if "'" in text:
+                raise ValueError(f"{self.name}: no single quote allowed in {text!r}")
+
 
 def get_cdk_step(action_name: str, env_name: str, stack_slug: str) -> EnvStep:
     """
@@ -114,12 +120,11 @@ def get_cdk_step(action_name: str, env_name: str, stack_slug: str) -> EnvStep:
     )
 
 
-def get_agentcore_target(env_name: str) -> StackTarget:
+def get_agentcore_target(config: Config) -> StackTarget:
     """
-    The AgentCore stack of one environment, with the AgentCore CLI target name
-    as its construct ID. Loads the config of that environment; makes no AWS call.
+    The AgentCore stack of the environment of ``config``, with the AgentCore CLI
+    target name as its construct ID.
     """
-    config = Config.load_from_local_config_file(env_name=env_name)
     return StackTarget(
         construct_id=config.agentcore_target_name,
         console_url=config.cft_stack_url_agentcore,
@@ -465,14 +470,18 @@ def render_project_env_tasks() -> str:
     ``config-<action>-all`` tasks.
     """
     env_names = [member.value for member in EnvNameEnum]
-    env_extra_tasks = {}
-    for env_name in env_names:
-        config = Config.load_from_local_config_file(env_name=env_name)
-        env_extra_tasks[env_name] = render_agentcore_env_tasks(
+    configs = {
+        env_name: Config.load_from_local_config_file(env_name=env_name)
+        for env_name in env_names
+    }
+    env_extra_tasks = {
+        env_name: render_agentcore_env_tasks(
             env_name=env_name,
-            agentcore_target=get_agentcore_target(env_name),
+            agentcore_target=get_agentcore_target(config),
             runtime_specs=get_runtime_specs(config),
         )
+        for env_name, config in configs.items()
+    }
     return render_env_tasks_block(
         env_stack_targets={
             env_name: get_stack_targets(env_name) for env_name in env_names
@@ -480,8 +489,7 @@ def render_project_env_tasks() -> str:
         env_extra_tasks=env_extra_tasks,
         tail_tasks=[
             *render_config_all_tasks(env_names),
-            *render_runtime_tasks(
-                get_runtime_specs(Config.load_from_local_config_file(env_names[0]))
-            ),
+            # the local tasks are the same in every environment
+            *render_runtime_tasks(get_runtime_specs(configs[env_names[0]])),
         ],
     )

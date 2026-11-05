@@ -16,11 +16,11 @@ from cookiecutter_aws_agentcore_runtime_basic_demo.devtools.agentcore_client imp
 from cookiecutter_aws_agentcore_runtime_basic_demo.devtools.agentcore_client import (
     invoke_agent_runtime,
 )
-from cookiecutter_aws_agentcore_runtime_basic_demo.devtools.agentcore_client import (
-    get_deployed_mcp_connection,
-)
 
 from cookiecutter_aws_agentcore_runtime_basic_demo.one.api import one
+from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.mcp_connection import (
+    get_deployed_mcp_connection,
+)
 from cookiecutter_aws_agentcore_runtime_basic_demo.devtools.mcp_client import (
     list_tools,
 )

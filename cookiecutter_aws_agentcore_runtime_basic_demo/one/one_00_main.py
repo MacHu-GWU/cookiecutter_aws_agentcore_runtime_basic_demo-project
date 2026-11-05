@@ -49,7 +49,7 @@ class One(
 
     # fmt: off
     env = env  #: The deployment environment detector, see :mod:`cookiecutter_aws_agentcore_runtime_basic_demo.env`.
-    runtime = runtime #: The runtime detector, see :mod:`cookiecutter_aws_agentcore_runtime_basic_demo.runtime`.
+    runtime = runtime  #: The runtime detector, see :mod:`cookiecutter_aws_agentcore_runtime_basic_demo.runtime`.
     # fmt: on
 
 

@@ -24,7 +24,7 @@ The same code runs in four runtimes:
 | :--- | :--- | :--- | :--- |
 | `local` | the package from the repo, in the repo's `.venv` | a developer: tests, scripts, local servers | write and test the code |
 | `agentcore_local` | the packaged copy of a runtime in `app/<Runtime>/`, in its own `.venv` | `agentcore dev`, the AgentCore CLI's local simulation | check the packaging and the cloud code path on a dev machine, with local AWS credentials |
-| `ci` | the package from the repo | a CI runner, such as GitHub Actions | tests, deploys from CI |
+| `ci` | the package from the repo | a CI runner, such as GitHub Actions | tests, which run as `local` (section 5); loading the config is not supported here (`20-centralized-config.md`) |
 | `agentcore` | the packaged copy, in an AgentCore microVM | AgentCore Runtime | the deployed runtime |
 
 The code needs to know which one it is in to choose its dependencies: where the config comes from, which AWS credentials and region to use. That choice is made in one place per dependency; this OP only answers "where am I".
@@ -83,7 +83,7 @@ The project's own signal comes first, so an AgentCore runtime is never taken for
 - The answer is not cached.
 - The signal names are written out in the test, not imported from `constants.py`: they are a contract with `agentcore.json` and the CLI, so renaming a constant's value must fail a test.
 
-`tests/conftest.py` removes the three signals and sets `ENV_NAME=dev` for every test, so the suite runs as `local` everywhere, a CI runner included.
+`tests/conftest.py` removes the three signals and sets `ENV_NAME=dev` for every test, so the suite runs as `local` everywhere, a CI runner included. It also removes the `AWS_PROFILE_FOR_<ENV>` profiles mise loads from `.env`, so no test signs in to a real account by accident.
 
 ---
 

@@ -41,11 +41,11 @@ Then propose, in one message:
 
 ## 2. Build it, in this order
 
-1. **Names** (`20`, section 5): `agentcore_runtime_name_<snake>` and `agentcore_runtime_physical_name_<snake>` in `config/config_01_name.py`, asserted in `tests/config/test_config_config_01_name.py`.
+1. **Names** (`20`, section 5): `agentcore_runtime_name_<snake>` and `agentcore_runtime_physical_name_<snake>` in `<package_name>/config/config_01_name.py`, asserted in `tests/config/test_config_config_01_name.py`.
 2. **Model in the config** (`20`, section 5): a `<snake>_model_id` field in `Config`, its value in `config/config-shared.json5` (or per environment), `config/example/`, the `config` fixture in `tests/conftest.py`, and the inline config of `test_load_from_local_config_file`.
 3. **Layer 1** (`40`, section 2): the module with `SYSTEM_PROMPT` and `TOOLS`, the tool functions, and their tests; no `strands` import.
 4. **Runtime module** (`40`, sections 3 and 4): `make_agent`, `build_agent` (with `one.new_boto_ses()`, `one.config.<snake>_model_id`, one `get_mcp_connection("<Mcp>", ...)` per MCP runtime), `agent = ProcessAgent(build_agent)`, `invoke`, `main()`. Reuse `runtimes/common.py` and `runtimes/mcp_connection.py`; never copy them. Test it like the existing agent runtime's test.
-5. **Register it** (`51`, section 7): a `RuntimeSpec(name=..., module="runtimes.<snake_name>_agent", protocol=RuntimeProtocolEnum.HTTP, sample_payload={"prompt": ...}, local_port=<next free>, mcp_runtimes=[...])` in `get_runtime_specs()`; update `test_get_runtime_specs`. The `HTTP` protocol makes the generated `main.py` expose `app` too (`52`, section 1). Then `mise run gen-env-tasks`.
+5. **Register it** (`51`, section 7): a `RuntimeSpec(name=..., module="runtimes.<snake_name>_agent", protocol=RuntimeProtocolEnum.HTTP, sample_payload={"prompt": ...}, local_port=<next free>, mcp_runtimes=[...])` in `get_runtime_specs(config)`; update `test_get_runtime_specs`. The `HTTP` protocol makes the generated `main.py` expose `app` too (`52`, section 1). Then `mise run gen-env-tasks`.
 6. **Bind its MCP runtimes** (`40`, section 4): a `this.application.runtime('<Mcp>').bind(this.application.runtime('<Agent>'));` line per MCP runtime in `agentcore/cdk/lib/cdk-stack.ts`, inside the `if`. Nothing else goes in that file (`50`, section 4). A registry test checks every `mcp_runtimes` entry has its line.
 7. **Permissions** (`60`, section 1): the CLI-created role can already call Bedrock models; add statements to the `agentcore_deps` policy only for other AWS access the agent's own tools need.
 

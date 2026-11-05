@@ -10,7 +10,8 @@ UV_PYTHON = "python"
 # Local, per-person settings; copy .env.example to .env (git-ignored) and fill in:
 # - ENV_NAME: the current environment (dev, tst, prd) of one.config / one.bsm; default dev.
 # - AWS_PROFILE_FOR_DEV, AWS_PROFILE_FOR_TST, AWS_PROFILE_FOR_PRD: the AWS CLI profile of
-#   each environment; the generated cdk-plan/up/down-<env>-* tasks pass it as --profile.
+#   each environment; one.bsm uses it locally, the generated cdk-* tasks pass it as
+#   --profile, the generated AgentCore tasks as AWS_PROFILE.
 _.file = ".env"
 
 [tools]
@@ -156,7 +157,7 @@ depends = ["inst"]
 
 # Per-environment tasks (config, AgentCore deploy, CDK)
 [tasks.gen-env-tasks]
-description = "🧩 Regenerate the config-<deploy|delete>-<env|all>, ac-deploy-<env>, cdk-<action>-<env>-<stack>-stack / -all tasks below from StackCtxEnum and EnvNameEnum (rewrites the <env-tasks> block)"
+description = "🧩 Regenerate every per-environment task (config-*, ac-*, cdk-*) and per-runtime task (ac-local-*, ac-dev-*) below from EnvNameEnum, StackCtxEnum, and the runtime registry (rewrites the <env-tasks> block)"
 run = ".venv/bin/python .mise/tasks/gen-env-tasks.py"
 depends = ["inst"]
 

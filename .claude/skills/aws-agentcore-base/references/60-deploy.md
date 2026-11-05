@@ -83,16 +83,13 @@ mise run ac-test-<env>
 - **An MCP runtime** gets a whole JSON-RPC request as the payload (such as `{"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "<tool>", "arguments": {...}}}`), and the task also passes `--mcp-method` and `--mcp-name`. The answer is a server-sent event with the JSON-RPC result. The server is stateless, so a `tools/call` needs no `initialize` first.
 - The task puts the payload in a shell variable, so it is printed and run without nested quotes; a payload cannot contain a single quote (the generator refuses it).
 - A healthy start logs the config source line of `main()`; a failing call is in the runtime's log (the invoke and observe OP).
+- After a deploy that creates or replaces a runtime, `mise run gen-quick-links` refreshes the console links of `QUICK_LINKS.md` (it reads AWS).
 
 ---
 
 ## 5. `deployed-state.json` stays in git
 
 `agentcore/.cli/deployed-state.json` records each deployed target's stack. The `.gitignore` of a fresh `agentcore create` commits it on purpose, so everyone who deploys shares it: commit it after every deploy or teardown that changes it. With several deployers, give each environment one deployer (in the end, CI), so two people never write it for the same target at once.
-
----
-
-After a deploy that creates or replaces a runtime, `mise run gen-quick-links` refreshes the console links of `QUICK_LINKS.md` (it reads AWS).
 
 ---
 

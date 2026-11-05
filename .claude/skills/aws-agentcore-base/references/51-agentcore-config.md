@@ -114,6 +114,6 @@ ENV_NAME=tst mise run ac-gen
 ## 7. Registering a runtime
 
 1. Its names in the config (`20-centralized-config.md`, section 5) and its runtime module (`30-mcp-runtime.md` or `40-agent-runtime.md`).
-2. A `RuntimeSpec` entry in `get_runtime_specs()`, with a sample payload, the next free local port, and for an agent its `mcp_runtimes`; update `test_get_runtime_specs`.
+2. A `RuntimeSpec` entry in `get_runtime_specs(config)`, with a sample payload, the next free local port, and for an agent its `mcp_runtimes`; update `test_get_runtime_specs`.
 3. For an agent that uses it: a `bind()` line in `cdk-stack.ts` (`50-agentcore-project-layout.md`, section 4).
 4. `mise run ac-gen`, then check the packaging (layer 3), then `mise run gen-env-tasks` for its generated tasks.

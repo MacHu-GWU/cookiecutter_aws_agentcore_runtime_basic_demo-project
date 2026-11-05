@@ -3,7 +3,7 @@
 name = "cookiecutter_aws_agentcore_runtime_basic_demo"
 # Bump before each release (https://semver.org/), then ``mise run inst`` to update ``uv.lock``.
 version = "0.1.1"
-description = "A template for a code base that manages multiple AWS CDK stacks with mise."
+description = "A template for a multi-environment AWS Bedrock AgentCore project: MCP server and agent runtimes, written local first, deployed by the AgentCore CLI next to CDK stacks, run with mise."
 # An SPDX license expression (PEP 639); keep ``LICENSE.txt`` in sync.
 # Read: https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#license-and-license-files
 # Valid identifiers: https://spdx.org/licenses/

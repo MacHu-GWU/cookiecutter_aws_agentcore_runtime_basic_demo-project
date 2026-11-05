@@ -59,7 +59,7 @@ mise run ac-check-wheels
 
 **The fix** for a version without a wheel: constrain it out in `pyproject.toml` with a comment (an upper bound, or `!=<version>`), then `uv lock`. A release can reach PyPI before its wheels do (SQLAlchemy 2.1.7 was an sdist only for a while, which failed a deploy: hence `sqlalchemy<2.1.0`). A package with no aarch64 wheel at all cannot be used in a CodeZip runtime; use a container build instead.
 
-**A new dependency** of a runtime: add it to `[dependency-groups] agentcore` (and to the base dependencies too if the dev machine imports it), `uv lock`, `mise run ac-check-wheels`.
+**A new dependency** of a runtime: add it to `[dependency-groups] agentcore` only, `uv lock`, `mise run ac-check-wheels`. The dev machine gets it too: `mise run inst` installs every group. The base dependencies are what the code that is never copied needs (CDK, the config loader).
 
 ---
 

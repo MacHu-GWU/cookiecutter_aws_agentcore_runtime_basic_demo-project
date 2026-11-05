@@ -18,9 +18,6 @@ from cookiecutter_aws_agentcore_runtime_basic_demo.devtools.agentcore_client imp
 from cookiecutter_aws_agentcore_runtime_basic_demo.devtools.agentcore_client import (
     invoke_agent_runtime,
 )
-from cookiecutter_aws_agentcore_runtime_basic_demo.devtools.agentcore_client import (
-    get_deployed_mcp_connection,
-)
 
 import io
 import json
@@ -29,10 +26,6 @@ import boto3
 import pytest
 from botocore.stub import Stubber
 from botocore.response import StreamingBody
-
-from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.mcp_connection import (
-    AwsSigV4Auth,
-)
 
 ARN = (
     "arn:aws:bedrock-agentcore:us-east-1:111122223333:runtime/MyProject_dev_MyAgent-abc"
@@ -185,13 +178,6 @@ def test_invoke_agent_runtime():
         )
     assert answer == {"result": "hi"}
     assert returned_id == session_id
-
-
-def test_get_deployed_mcp_connection():
-    url, auth = get_deployed_mcp_connection(ARN, fake_session())
-    assert url.startswith("https://bedrock-agentcore.us-east-1.amazonaws.com/runtimes/")
-    assert isinstance(auth, AwsSigV4Auth)
-    assert auth.region == "us-east-1"
 
 
 if __name__ == "__main__":

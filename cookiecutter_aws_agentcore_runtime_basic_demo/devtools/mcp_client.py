@@ -3,8 +3,9 @@
 """
 A small MCP client to call an MCP runtime: list its tools, and call one with
 JSON arguments, over streamable HTTP. ``mise run ac-local-<slug>-call`` uses it on
-a local MCP server, started with ``ac-local-<slug>`` or ``ac-dev-<slug>``; with the SigV4
-auth of :func:`~cookiecutter_aws_agentcore_runtime_basic_demo.devtools.agentcore_client.get_deployed_mcp_connection`
+a local MCP server, started with ``ac-local-<slug>`` or ``ac-dev-<slug>``; with the
+URL and SigV4 auth of
+:func:`~cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.mcp_connection.get_deployed_mcp_connection`
 it calls a deployed MCP runtime.
 """
 
@@ -20,20 +21,11 @@ import httpx
 from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 
-from ..runtimes.common import LOCAL_MCP_URL
-
 MCP_URL_VAR = "MCP_URL"
 """
 The URL of the MCP server this client calls when ``--url`` is not given, such
 as ``MCP_URL=http://localhost:18731/mcp``.
 """
-
-DEFAULT_MCP_URL = LOCAL_MCP_URL
-"""
-The URL when neither ``--url`` nor :data:`MCP_URL_VAR` is given: a local server
-on the default port, such as ``agentcore dev`` without ``--port``.
-"""
-
 
 #: Seconds to wait to connect and send, and to read an answer (a tool may be slow).
 TIMEOUT = httpx.Timeout(30.0, read=300.0)
@@ -103,10 +95,12 @@ def main(args: list[str] | None = None) -> int:
     tool names, then the tool's result as indented JSON. Exit 1 if it fails.
     """
     parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
+    url = os.environ.get(MCP_URL_VAR)
     parser.add_argument(
         "--url",
-        default=os.environ.get(MCP_URL_VAR, DEFAULT_MCP_URL),
-        help=f"the MCP URL (default: ${MCP_URL_VAR}, else {DEFAULT_MCP_URL})",
+        default=url,
+        required=url is None,
+        help=f"the MCP URL (default: ${MCP_URL_VAR})",
     )
     parser.add_argument("--tool", required=True, help="the tool to call")
     parser.add_argument(

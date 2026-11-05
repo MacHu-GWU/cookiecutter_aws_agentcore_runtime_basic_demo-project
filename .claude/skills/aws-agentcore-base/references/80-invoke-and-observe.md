@@ -9,7 +9,7 @@ Implements **OP-8**. The quick checks after a deploy are the generated `ac-statu
 | | |
 | :--- | :--- |
 | EP | `<package_name>/devtools/agentcore_client.py` |
-| FP | `<package_name>/devtools/agentcore_client.py`, `<package_name>/devtools/mcp_client.py` (its `auth`), `<package_name>/devtools/quick_links.py`, `.mise/tasks/gen-quick-links.py`, `QUICK_LINKS.md`, the console URL helpers of `config_01_name.py`, the AgentCore clients of `<package_name>/one/one_02_boto_ses.py`, the `ac-logs` step of `<package_name>/agentcore_project/mise_tasks.py`, `tests_int/test_agentcore_runtimes.py`, `tests/devtools/test_devtools_agentcore_client.py` |
+| FP | `<package_name>/devtools/agentcore_client.py`, `<package_name>/devtools/mcp_client.py` (its `auth`), `get_deployed_mcp_connection` of `<package_name>/runtimes/mcp_connection.py`, `<package_name>/devtools/quick_links.py`, `.mise/tasks/gen-quick-links.py`, `QUICK_LINKS.md`, the console URL helpers of `config_01_name.py`, the AgentCore clients of `<package_name>/one/one_02_boto_ses.py`, the `ac-logs` step of `<package_name>/agentcore_project/mise_tasks.py`, `tests_int/test_agentcore_runtimes.py`, `tests/devtools/test_devtools_agentcore_client.py` |
 | CMD | `mise run int-test` (needs a deploy; calls the model); `mise run gen-quick-links` (reads AWS); `mise run ac-logs-<env>-<slug>`; `mise run ac-invoke-<env>-<slug>`; unit tests below |
 
 ---
@@ -22,7 +22,7 @@ Implements **OP-8**. The quick checks after a deploy are the generated `ac-statu
 | :--- | :--- | :--- |
 | Find the runtime | `find_runtime_arn(control_client, physical_name)` | `ListAgentRuntimes`, matched on `agentRuntimeName` = `agentcore_runtime_physical_name_<x>` of the config. The ARN ends in an ID assigned at deploy time, so it is looked up, never built |
 | Call an agent | `invoke_agent_runtime(client, arn, payload, session_id=None)` | `InvokeAgentRuntime` with the JSON payload, qualifier `DEFAULT`; returns the JSON answer and the runtime session ID it ran in |
-| Call an MCP runtime | `get_deployed_mcp_connection(arn, boto_session)`, then `list_tools(url, auth=auth)` / `call_tool(url, name, arguments, auth=auth)` of `mcp_client.py` | the invocation URL of the ARN, every request signed with SigV4, exactly as an agent runtime calls it (`40-agent-runtime.md`, section 4) |
+| Call an MCP runtime | `get_deployed_mcp_connection(arn, boto_session)` of `runtimes/mcp_connection.py`, then `list_tools(url, auth=auth)` / `call_tool(url, name, arguments, auth=auth)` of `mcp_client.py` | the invocation URL of the ARN, every request signed with SigV4, exactly as an agent runtime calls it (`40-agent-runtime.md`, section 4) |
 | Start a conversation | `new_session_id(prefix)` | `<prefix>-<uuid4>`, at least 33 characters |
 
 The caller needs `bedrock-agentcore:InvokeAgentRuntime` on the runtime and `bedrock-agentcore:ListAgentRuntimes`; a developer's profile of the environment usually has both.
@@ -163,7 +163,7 @@ They need the environment deployed, and the agent test calls the model: ask befo
 
 | Test file | Covers |
 | :--- | :--- |
-| `tests/devtools/test_devtools_agentcore_client.py` | session IDs; the ARN lookup over pages, and a missing runtime (botocore `Stubber`); the log group; `invoke_agent_runtime` with its session; the deployed MCP connection |
+| `tests/devtools/test_devtools_agentcore_client.py` | session IDs; the ARN lookup over pages, and a missing runtime (botocore `Stubber`); the log group; `invoke_agent_runtime` with its session |
 | `tests/devtools/test_devtools_mcp_client.py` | the client against a real local server, with and without an auth on every request |
 | `tests/agentcore_project/test_agentcore_project_mise_tasks.py` | the generated `ac-invoke` and `ac-logs` tasks |
 
