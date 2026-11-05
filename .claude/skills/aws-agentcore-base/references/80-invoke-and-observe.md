@@ -148,6 +148,7 @@ They need the environment deployed, and the agent test calls the model: ask befo
 
 | Symptom | Cause | Fix |
 | :--- | :--- | :--- |
+| `400` with `{"error": [{"loc": ["prompt"], ...}]}` | the payload does not match the agent's request model | send the fields of `<Agent>Request` (`40-agent-runtime.md`, section 2) |
 | `Received error (500) from runtime` | an exception in the runtime | read the session's log stream (section 4): the traceback is there |
 | `config SSM parameter ... does not exist` in the log, at startup | the config was never deployed, or was deleted | `mise run config-deploy-<env>` |
 | `AccessDeniedException` for a Bedrock model, `agreementAvailability` `NOT_AVAILABLE` | the model's agreement is not available in the account, whatever the console's model access page shows | use a model the account can call (check with `aws bedrock get-foundation-model-availability`); never accept a Marketplace agreement for the user |

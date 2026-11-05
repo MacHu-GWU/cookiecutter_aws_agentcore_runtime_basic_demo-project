@@ -23,6 +23,8 @@ def test():
     _ = api.get_site
     _ = api.get_technician
     _ = api.get_weather
+    _ = api.SiteAgentRequest
+    _ = api.SiteAgentResponse
 
 
 if __name__ == "__main__":

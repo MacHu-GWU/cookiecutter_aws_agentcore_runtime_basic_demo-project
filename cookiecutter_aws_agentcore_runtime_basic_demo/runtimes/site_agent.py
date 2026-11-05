@@ -19,7 +19,9 @@ from __future__ import annotations
 import typing as T
 
 import httpx
+import pydantic
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
+from starlette.exceptions import HTTPException
 from strands import Agent
 from strands import tool
 from strands.models import BedrockModel
@@ -28,6 +30,8 @@ from strands.tools.mcp import MCPClient
 from ..one.api import one
 from ..power_plant.site_agent import SYSTEM_PROMPT
 from ..power_plant.site_agent import TOOLS
+from ..power_plant.site_agent import SiteAgentRequest
+from ..power_plant.site_agent import SiteAgentResponse
 from .common import ProcessAgent
 from .common import strip_thinking
 from .common import print_config_source
@@ -88,9 +92,18 @@ app = BedrockAgentCoreApp()
 @app.entrypoint
 def invoke(payload: dict) -> dict:
     """
-    Answer ``payload["prompt"]``; returns ``{"result": <answer text>}``.
+    Answer a :class:`SiteAgentRequest` with a :class:`SiteAgentResponse`, as
+    JSON. A payload that does not validate is the caller's mistake: a 400 with
+    pydantic's errors, before the agent is built or the model called
+    (``BedrockAgentCoreApp`` answers any other exception with a 500).
     """
-    return {"result": strip_thinking(agent(payload["prompt"]))}
+    try:
+        request = SiteAgentRequest.model_validate(payload)
+    except pydantic.ValidationError as e:
+        errors = e.errors(include_url=False, include_context=False, include_input=False)
+        raise HTTPException(status_code=400, detail=errors)
+    answer = strip_thinking(agent(request.prompt))
+    return SiteAgentResponse(result=answer).model_dump()
 
 
 def main():

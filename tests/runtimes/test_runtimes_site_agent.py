@@ -9,6 +9,8 @@ from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import in
 from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import main
 
 import boto3
+import pytest
+from starlette.exceptions import HTTPException
 
 from cookiecutter_aws_agentcore_runtime_basic_demo.config.api import Config
 from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes import site_agent
@@ -64,6 +66,17 @@ def test_invoke(monkeypatch):
     """The answer of the agent of the process, without the model's thinking."""
     monkeypatch.setattr(site_agent, "agent", ProcessAgent(FakeAgent))
     assert invoke({"prompt": "hi"}) == {"result": "answer to hi"}
+
+
+def test_invoke_bad_payload(monkeypatch):
+    """A payload that does not validate is a 400 naming the field; no agent is built."""
+    built = []
+    monkeypatch.setattr(site_agent, "agent", ProcessAgent(lambda: built.append(1)))
+    with pytest.raises(HTTPException) as info:
+        invoke({"question": "hi"})
+    assert info.value.status_code == 400
+    assert info.value.detail[0]["loc"] == ("prompt",)
+    assert built == []
 
 
 def test_main(monkeypatch, capsys):

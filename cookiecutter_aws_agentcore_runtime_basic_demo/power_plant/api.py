@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Public API of the ``power_plant`` subpackage: the database, its queries, and the fake weather.
+Public API of the ``power_plant`` subpackage: the database, its queries, the fake weather, and the SiteAgent's request and response.
 """
 
 from .orm import Base
@@ -22,3 +22,5 @@ from .queries import list_assets
 from .queries import get_site
 from .queries import get_technician
 from .weather import get_weather
+from .site_agent import SiteAgentRequest
+from .site_agent import SiteAgentResponse

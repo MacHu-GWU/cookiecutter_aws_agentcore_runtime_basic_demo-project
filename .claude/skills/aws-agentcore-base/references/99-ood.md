@@ -221,14 +221,14 @@ An agent is a prompt, a model, its own tools, and the MCP servers it uses. Follo
 
 ### OP-4-1 Layer 1: what the agent is, in plain Python
 
-`<package_name>/<domain>/<agent_name>.py`, no `strands` import: `SYSTEM_PROMPT`, and `TOOLS`, its own tool functions (pure, typed, a docstring for the LLM, a contract model, exactly as OP-3-1). The model ID is a config field (OP-2-2), not a constant.
+`<package_name>/<domain>/<agent_name>.py`, no `strands` import: `<Agent>Request` and `<Agent>Response`, the payload contract as Pydantic models; `SYSTEM_PROMPT`; and `TOOLS`, its own tool functions (pure, typed, a docstring for the LLM, a contract model, exactly as OP-3-1). The model ID is a config field (OP-2-2), not a constant.
 
 ### OP-4-2 Layer 2: the Strands agent
 
 - `make_agent(model_id, boto_session, mcp_url, mcp_auth)` builds the `Agent` from its arguments only: `BedrockModel`, the prompt, `TOOLS` wrapped with `strands.tool`, one `MCPClient` per MCP server.
 - `build_agent()` gives it the dependencies of the process: `one.new_boto_ses()` (a new session, credentials resolved on the first invocation, never at import time), the model ID of the config, the MCP connection.
 - `agent = ProcessAgent(build_agent)` (`runtimes/common.py`): one agent per process, so per session; its MCP session stays open and the conversation is remembered; one call at a time; dropped after a failure.
-- `BedrockAgentCoreApp` with `@app.entrypoint invoke(payload)`: the AgentCore HTTP contract; `strip_thinking` cleans the answer.
+- `BedrockAgentCoreApp` with `@app.entrypoint invoke(payload)`: the AgentCore HTTP contract. It validates the payload against the request model (a 400 with pydantic's errors when it does not validate), and `strip_thinking` cleans the answer.
 - Where its MCP servers are (`runtimes/mcp_connection.py`, `get_mcp_connection(<Mcp>, boto_session)`): `MCP_URL_<MCP NAME>` if set, else the ARN in `get_runtime_arn_env_var(<Mcp>)` (set by `bind()`, OP-5-1) turned into the invocation URL and signed with `AwsSigV4Auth` (`get_deployed_mcp_connection`), else a `ValueError` that names the missing `bind()` line.
 - `main()`: `print_config_source()`, then `app.run()`.
 

@@ -18,6 +18,11 @@ def test_invoke_agent(agent_url):
     assert answer == {"result": f"answer to hi in session {'s' * 33}"}
     with pytest.raises(httpx.HTTPStatusError):
         invoke_agent(agent_url, {"prompt": "fail"})
+    # a payload that does not validate: 400, with the field
+    with pytest.raises(httpx.HTTPStatusError) as info:
+        invoke_agent(agent_url, {"question": "hi"})
+    assert info.value.response.status_code == 400
+    assert info.value.response.json()["error"][0]["loc"] == ["prompt"]
 
 
 def test_main(agent_url, monkeypatch, capsys):

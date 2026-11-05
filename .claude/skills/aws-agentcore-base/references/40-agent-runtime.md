@@ -20,7 +20,7 @@ Like an MCP server (`30-mcp-runtime.md`, section 1), an agent is split so that e
 
 | Layer | What | Knows about | Tested with |
 | :--- | :--- | :--- | :--- |
-| 1. The agent's definition | the system prompt and the agent's own tool functions | only Python | plain unit tests |
+| 1. The agent's definition | its request and response models, the system prompt, and the agent's own tool functions | only Python and Pydantic | plain unit tests |
 | 2. The agent runtime | a factory that builds the Strands agent from what it is given, the dependencies of the process, one agent per process, the HTTP app, `main()` | layer 1, Strands, `BedrockAgentCoreApp`, `one` | a real local MCP server, fake agents; no model call |
 | 3. Local run | the agent on a local port, pointed at a local MCP server, and a client to call it | layer 2 | by hand (calls the model), and the client's tests against the real app with a fake agent |
 
@@ -34,14 +34,18 @@ The model ID is a config value (`20-centralized-config.md`), not code.
 
 | Name | What |
 | :--- | :--- |
+| `<Agent>Request` | the payload a caller sends, a Pydantic model with `Field(description=...)` on every field, such as `prompt: str = Field(min_length=1)` |
+| `<Agent>Response` | what the agent answers, such as `result: str` |
 | `SYSTEM_PROMPT` | what the agent is for and how it answers |
 | `TOOLS` | the agent's own tools, as plain functions |
+
+The two models are the agent's contract with its callers, as the result models are an MCP tool's: written down, validated, and changed on purpose. A new field of the request (a user ID, a site to focus on) is a field here, read in `invoke`.
 
 **A tool function** follows the rules of an MCP tool function (`30-mcp-runtime.md`, section 2): stateless, dependencies as arguments, a docstring written for the LLM (its description), type hints on every parameter (its input schema), a Pydantic result model. It needs no dependency injected when it takes none; one that needs a client gets it from layer 2, like an MCP tool.
 
 The tools of the agent's MCP servers come on top of `TOOLS`, at layer 2.
 
-**Tests and CMD:** `tests/<domain>/test_<domain>_<agent_name>.py` checks the prompt and that every tool has a docstring, a type hint per parameter, and a Pydantic result; the tool functions' own modules have their own tests.
+**Tests and CMD:** `tests/<domain>/test_<domain>_<agent_name>.py` checks what the request accepts and refuses, that every model field has a description, the prompt, and that every tool has a docstring, a type hint per parameter, and a Pydantic result; the tool functions' own modules have their own tests.
 
 ```bash
 .venv/bin/python tests/<domain>/test_<domain>_<agent_name>.py
@@ -75,7 +79,13 @@ app = BedrockAgentCoreApp()
 
 @app.entrypoint
 def invoke(payload: dict) -> dict:
-    return {"result": strip_thinking(agent(payload["prompt"]))}
+    try:
+        request = <Agent>Request.model_validate(payload)
+    except pydantic.ValidationError as e:
+        errors = e.errors(include_url=False, include_context=False, include_input=False)
+        raise HTTPException(status_code=400, detail=errors)  # starlette's
+    answer = strip_thinking(agent(request.prompt))
+    return <Agent>Response(result=answer).model_dump()
 
 
 def main():
@@ -98,11 +108,11 @@ def main():
 - One call at a time (a lock): an agent cannot run two calls at once.
 - A call that raises (such as on a broken MCP connection) drops the agent; the next call builds a new one, and the conversation so far is lost.
 
-**The HTTP app:** `BedrockAgentCoreApp` serves `POST /invocations` (the `@app.entrypoint` function, with the request's JSON payload) and `GET /ping` on port 8080: the AgentCore HTTP contract. `invoke` returns a JSON-friendly dict. `strip_thinking` (in `runtimes/common.py`) removes the `<thinking>` blocks and `<response>` tags some models (such as Nova) put around the answer.
+**The HTTP app:** `BedrockAgentCoreApp` serves `POST /invocations` (the `@app.entrypoint` function, with the request's JSON payload) and `GET /ping` on port 8080: the AgentCore HTTP contract. `invoke` validates the payload against the request model first: a wrong one is the caller's mistake, so it raises starlette's `HTTPException(400)`, which `BedrockAgentCoreApp` answers as `{"error": <pydantic's errors>}` with that status, before the agent is built or the model called; any other exception is a 500. It returns the response model as a dict. `strip_thinking` (in `runtimes/common.py`) removes the `<thinking>` blocks and `<response>` tags some models (such as Nova) put around the answer.
 
 **`main()`** prints the config source (a runtime that cannot load its config fails at startup), then `app.run()`. `agentcore dev` serves `app` with uvicorn instead of calling `main()`, so there the config loads on the first request.
 
-**Tests and CMD:** `tests/runtimes/test_runtimes_<runtime_name>.py`: the ARN variable name of each MCP runtime; `make_agent` loads the own tools and the MCP tools from the real local MCP server (fixture `mcp_url`), without a model call; `build_agent` with `MCP_URL_<MCP NAME>` set; `invoke` with a fake agent; `main()`. `test_runtimes_common.py` covers `ProcessAgent` (built once, reused, dropped after a failure) and `strip_thinking`.
+**Tests and CMD:** `tests/runtimes/test_runtimes_<runtime_name>.py`: the ARN variable name of each MCP runtime; `make_agent` loads the own tools and the MCP tools from the real local MCP server (fixture `mcp_url`), without a model call; `build_agent` with `MCP_URL_<MCP NAME>` set; `invoke` with a fake agent, and a bad payload (400, no agent built); `main()`. `test_runtimes_common.py` covers `ProcessAgent` (built once, reused, dropped after a failure) and `strip_thinking`.
 
 ```bash
 .venv/bin/python tests/runtimes/test_runtimes_<runtime_name>.py
@@ -183,7 +193,7 @@ Locally there is one process, so every call is the same conversation until the s
 ## 6. Adding an agent runtime, this OP's part
 
 1. Its model ID as a config field, and its runtime names (`20-centralized-config.md`, section 5).
-2. Layer 1: `<package_name>/<domain>/<agent_name>.py` with `SYSTEM_PROMPT` and `TOOLS`, the tool functions, and their tests.
+2. Layer 1: `<package_name>/<domain>/<agent_name>.py` with its request and response models, `SYSTEM_PROMPT`, and `TOOLS`, the tool functions, and their tests.
 3. Layer 2: `<package_name>/runtimes/<runtime_name>.py` as in section 3, with one `get_mcp_connection(<Mcp>, ...)` per MCP server, and its test. Reuse `common.py` and `mcp_connection.py`; never copy them.
 4. A `bind()` line per MCP server in `cdk-stack.ts` (section 4).
 5. Layer 3: an entry in the runtime registry with the next free local port, a sample prompt, and its `mcp_runtimes`; then `mise run gen-env-tasks` for its `ac-local-<slug>` tasks.
