@@ -31,37 +31,10 @@ from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.site_agent import ma
 
 import pytest
 
-import time
-import socket
-import threading
 
 import httpx
-import uvicorn
 
 from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes import site_agent
-from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.power_plant_mcp import mcp
-
-
-@pytest.fixture(scope="module")
-def mcp_url():
-    """Run the real PowerPlantMcp server on a free local port for this module."""
-    with socket.socket() as sock:
-        sock.bind(("127.0.0.1", 0))
-        port = sock.getsockname()[1]
-    config = uvicorn.Config(
-        mcp.streamable_http_app(),
-        host="127.0.0.1",
-        port=port,
-        log_level="warning",
-    )
-    server = uvicorn.Server(config)
-    thread = threading.Thread(target=server.run, daemon=True)
-    thread.start()
-    while not server.started:
-        time.sleep(0.05)
-    yield f"http://127.0.0.1:{port}/mcp"
-    server.should_exit = True
-    thread.join()
 
 
 def test_get_weather():

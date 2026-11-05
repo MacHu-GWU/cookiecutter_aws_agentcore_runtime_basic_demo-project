@@ -1,24 +1,24 @@
 # -*- coding: utf-8 -*-
 
-from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.local_port import (
+from cookiecutter_aws_agentcore_runtime_basic_demo.devtools.local_port import (
     PortHeldByOtherError,
 )
-from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.local_port import (
+from cookiecutter_aws_agentcore_runtime_basic_demo.devtools.local_port import (
     find_listening_pids,
 )
-from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.local_port import (
+from cookiecutter_aws_agentcore_runtime_basic_demo.devtools.local_port import (
     get_process_cwd,
 )
-from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.local_port import (
+from cookiecutter_aws_agentcore_runtime_basic_demo.devtools.local_port import (
     get_process_command,
 )
-from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.local_port import (
+from cookiecutter_aws_agentcore_runtime_basic_demo.devtools.local_port import (
     is_own_process,
 )
-from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.local_port import (
+from cookiecutter_aws_agentcore_runtime_basic_demo.devtools.local_port import (
     free_port,
 )
-from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.local_port import (
+from cookiecutter_aws_agentcore_runtime_basic_demo.devtools.local_port import (
     main,
 )
 
@@ -29,7 +29,7 @@ import subprocess
 
 import pytest
 
-from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project import local_port
+from cookiecutter_aws_agentcore_runtime_basic_demo.devtools import local_port
 
 #: A server that ignores SIGTERM, so only SIGKILL stops it.
 STUBBORN_SERVER = """
@@ -156,6 +156,6 @@ if __name__ == "__main__":
 
     run_cov_test(
         __file__,
-        "cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.local_port",
+        "cookiecutter_aws_agentcore_runtime_basic_demo.devtools.local_port",
         preview=False,
     )

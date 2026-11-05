@@ -102,7 +102,7 @@ depends = ["inst"]
 
 [tasks.ac-local-mcp-call]
 description = "🔌 Call the local PowerPlantMcp server (start it first with ac-local-mcp or ac-dev-mcp): list tools, get site S-03"
-run = "MCP_URL=http://localhost:$LOCAL_MCP_PORT/mcp .venv/bin/python .mise/tasks/ac-local-mcp-call.py"
+run = """.venv/bin/python .mise/tasks/ac-local-mcp-call.py --url http://localhost:$LOCAL_MCP_PORT/mcp --tool get_site --arguments '{"site_id": "S-03"}'"""
 
 [tasks.ac-local-agent]
 description = "🤖 Run the SiteAgent agent locally on http://localhost:$LOCAL_AGENT_PORT (needs ac-local-mcp running, and Bedrock access with the dev profile)"

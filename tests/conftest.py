@@ -2,7 +2,12 @@
 
 import pytest
 
+import time
 import shutil
+import socket
+import threading
+
+import uvicorn
 
 from cookiecutter_aws_agentcore_runtime_basic_demo.paths import path_enum
 from cookiecutter_aws_agentcore_runtime_basic_demo.env import EnvNameEnum
@@ -59,3 +64,32 @@ def config() -> Config:
         db_connection_string="sqlite+pysqlite:///:memory:",
         site_agent_model_id="us.amazon.nova-2-lite-v1:0",
     )
+
+
+@pytest.fixture(scope="session")
+def mcp_url():
+    """
+    Serve the real ``PowerPlantMcp`` server on a free local port for the whole
+    test session, and give its MCP URL: what an agent or a client connects to.
+    """
+    from cookiecutter_aws_agentcore_runtime_basic_demo.runtimes.power_plant_mcp import (
+        mcp,
+    )
+
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        port = sock.getsockname()[1]
+    config = uvicorn.Config(
+        mcp.streamable_http_app(),
+        host="127.0.0.1",
+        port=port,
+        log_level="warning",
+    )
+    server = uvicorn.Server(config)
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    while not server.started:
+        time.sleep(0.05)
+    yield f"http://127.0.0.1:{port}/mcp"
+    server.should_exit = True
+    thread.join()

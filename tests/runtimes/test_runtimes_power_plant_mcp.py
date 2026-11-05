@@ -10,7 +10,13 @@ import asyncio
 
 from mcp.server.fastmcp.exceptions import ToolError
 
+from cookiecutter_aws_agentcore_runtime_basic_demo.config.api import Config
 from cookiecutter_aws_agentcore_runtime_basic_demo.power_plant import queries
+
+
+def test_name(config: Config):
+    """The server is named after the runtime in agentcore.json."""
+    assert mcp.name == config.agentcore_runtime_name_power_plant_mcp
 
 
 def test_list_tools():
@@ -64,11 +70,15 @@ def test_call_tool_not_found():
         asyncio.run(mcp.call_tool("get_site", {"site_id": "S-99"}))
 
 
-def test_main(monkeypatch):
+def test_main(monkeypatch, capsys):
+    """main() loads the config and the database, then serves."""
     calls = []
     monkeypatch.setattr(mcp, "run", lambda transport: calls.append(transport))
     main()
     assert calls == ["streamable-http"]
+    out = capsys.readouterr().out
+    assert "Loaded the config of 'dev' on runtime 'local'" in out
+    assert "Connected to the database" in out
 
 
 if __name__ == "__main__":

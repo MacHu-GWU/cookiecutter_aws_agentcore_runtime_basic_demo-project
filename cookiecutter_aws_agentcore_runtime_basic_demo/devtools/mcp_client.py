@@ -1,0 +1,99 @@
+# -*- coding: utf-8 -*-
+
+"""
+A small MCP client to call an MCP runtime by hand: list its tools, and call one
+with JSON arguments, over streamable HTTP. ``mise run ac-local-mcp-call`` uses
+it on a local server, started with ``ac-local-mcp`` or ``ac-dev-mcp``.
+"""
+
+from __future__ import annotations
+
+import os
+import json
+import asyncio
+import argparse
+
+from mcp import ClientSession
+from mcp.client.streamable_http import streamable_http_client
+
+MCP_URL_VAR = "MCP_URL"
+"""
+The URL of the MCP server to call when ``--url`` is not given; the mise tasks
+set it to the local port of the server.
+"""
+
+DEFAULT_MCP_URL = "http://localhost:8000/mcp"
+"""
+The URL when neither ``--url`` nor :data:`MCP_URL_VAR` is given: ``agentcore
+dev`` without ``--port``.
+"""
+
+
+async def _list_tools(url: str) -> list[str]:
+    async with streamable_http_client(url) as (read, write, _):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            result = await session.list_tools()
+            return [tool.name for tool in result.tools]
+
+
+async def _call_tool(url: str, name: str, arguments: dict):
+    async with streamable_http_client(url) as (read, write, _):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            return await session.call_tool(name, arguments)
+
+
+def list_tools(url: str) -> list[str]:
+    """
+    The names of the tools of the MCP server at ``url``, in the server's order.
+    """
+    return asyncio.run(_list_tools(url))
+
+
+def call_tool(url: str, name: str, arguments: dict | None = None):
+    """
+    Call the tool ``name`` of the MCP server at ``url``, and return its result
+    as JSON data: the structured output (a list result is wrapped as
+    ``{"result": [...]}``), else the JSON text.
+
+    :raises RuntimeError: the tool failed; the message is the server's.
+    """
+    # raised here, not inside the client's task group, which would wrap it
+    result = asyncio.run(_call_tool(url, name, arguments or {}))
+    if result.isError:
+        raise RuntimeError(result.content[0].text)
+    if result.structuredContent is not None:
+        return result.structuredContent
+    return json.loads(result.content[0].text)  # pragma: no cover
+
+
+def main(args: list[str] | None = None) -> int:
+    """
+    ``mcp_client --tool <name> --arguments <json> [--url <url>]``: print the
+    tool names, then the tool's result as indented JSON. Exit 1 if it fails.
+    """
+    parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
+    parser.add_argument(
+        "--url",
+        default=os.environ.get(MCP_URL_VAR, DEFAULT_MCP_URL),
+        help=f"the MCP URL (default: ${MCP_URL_VAR}, else {DEFAULT_MCP_URL})",
+    )
+    parser.add_argument("--tool", required=True, help="the tool to call")
+    parser.add_argument(
+        "--arguments",
+        default="{}",
+        help="the tool's arguments as a JSON object",
+    )
+    parsed = parser.parse_args(args)
+    print(f"MCP server: {parsed.url}")
+    for name in list_tools(parsed.url):
+        print(f"tool: {name}")
+    print(f"call: {parsed.tool} {parsed.arguments}")
+    try:
+        result = call_tool(parsed.url, parsed.tool, json.loads(parsed.arguments))
+    except RuntimeError as e:
+        print(f"error: {e}")
+        return 1
+    print(json.dumps(result, indent=2))
+    return 0

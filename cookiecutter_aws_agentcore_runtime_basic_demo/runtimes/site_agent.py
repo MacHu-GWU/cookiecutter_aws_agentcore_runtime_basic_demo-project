@@ -35,6 +35,7 @@ from strands.tools.mcp import MCPClient
 
 from ..one.api import one
 from ..power_plant import weather
+from .common import print_config_source
 
 #: The PowerPlantMcp URL when nothing else is set: ``agentcore dev`` without ``--port``.
 #: The ``ac-local-*`` and ``ac-dev-*`` mise tasks set ``MCP_URL`` to their own port.
@@ -59,18 +60,6 @@ _RESPONSE_TAG_PATTERN = re.compile(r"</?response>")
 
 #: The agent's own tool; its description is the docstring of the business function.
 get_weather = tool(weather.get_weather)
-
-
-def print_config_source():
-    """
-    Load the config, and print where it came from; a runtime that cannot read
-    its config fails here, at startup.
-    """
-    print(
-        f"Loaded the config of {one.config.env_name!r} "
-        f"on runtime {one.runtime.current_runtime_name()!r}",
-        flush=True,
-    )
 
 
 def strip_thinking(text: str) -> str:

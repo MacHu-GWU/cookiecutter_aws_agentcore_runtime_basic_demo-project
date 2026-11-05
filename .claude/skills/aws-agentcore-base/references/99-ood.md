@@ -175,9 +175,9 @@ Why SSM and not `envVars` or a copy in the zip: secrets would sit in plain text 
 An MCP server is a set of tools, and a tool is a function. Following section 2, the function is written and tested on its own, the MCP server is a thin layer that registers it, and the whole runs locally before anything AgentCore is involved. Deploying it is OP-5 and OP-6.
 
 - EP: `<package_name>/runtimes/<runtime_name>.py`, or `<package_name>/runtimes/<runtime_name>/main.py` when it grows
-- FP: `<package_name>/<domain>/**`, the runtime module, `tests/<domain>/**`, `tests/runtimes/**`
-- CMD: `mise run cov`; `mise run ac-local-<slug>`, then `mise run ac-local-<slug>-call`
-- Docs: `30-mcp-runtime.md` (to write)
+- FP: `<package_name>/<domain>/**`, the runtime module, `<package_name>/runtimes/common.py`, `<package_name>/devtools/**`, `tests/<domain>/**`, `tests/runtimes/**`, `tests/devtools/**`
+- CMD: per layer (see the reference); `mise run cov`; `mise run ac-local-<slug>`, then `mise run ac-local-<slug>-call`
+- Docs: `30-mcp-runtime.md`
 
 ### OP-3-1 Layer 1: the tool functions
 
@@ -192,21 +192,21 @@ An MCP server is a set of tools, and a tool is a function. Following section 2, 
 
 A runtime module, always under `<package_name>/runtimes/`: `<runtime_name>.py` when small, `<runtime_name>/main.py` (a subpackage) when not. Either way it has a `main()`.
 
-- One FastMCP server: `host="0.0.0.0"`, port from `FASTMCP_PORT` (default 8000), `stateless_http=True`, `transport="streamable-http"`, path `/mcp`: the AgentCore MCP contract, which works locally too.
-- One thin wrapper per tool: `@mcp.tool()`, the function's docstring copied (`functools.wraps` would not do: it would expose the injected parameter), the dependency injected from `one` (such as `one.engine`), the contract model as the return type.
+- One FastMCP server from `new_mcp_server(name)` of the shared `runtimes/common.py`: `host="0.0.0.0"`, port from `FASTMCP_PORT` (default 8000), `stateless_http=True`, path `/mcp`, served over `streamable-http` by `run_mcp_server`: the AgentCore MCP contract, which works locally too.
+- One thin wrapper per tool: `@mcp.tool()`, the function's docstring copied by `doc_from` (`functools.wraps` would not do: it would expose the injected parameter), the dependency injected from `one` (such as `one.engine`), the contract model as the return type.
 - The dependencies are `one` properties built once per process (section 2).
-- `main()`: load the config and the dependencies, print where they came from (`flush=True`), then run. A runtime that cannot start fails here, before taking traffic.
+- `main()`: load the config and the dependencies, print where they came from (`print_config_source`, `flush=True`), then run. A runtime that cannot start fails here, before taking traffic.
 
 ### OP-3-3 Run it locally
 
-- `mise run ac-local-<slug>`: frees `LOCAL_<NAME>_PORT` (`free-port`, only this repo's leftover servers), then `FASTMCP_PORT=$LOCAL_<NAME>_PORT python -m <package_name>.runtimes.<runtime_name>`. Runtime `local`, config from the files.
+- `mise run ac-local-<slug>`: frees `LOCAL_<NAME>_PORT` (`free-port`, `<package_name>/devtools/local_port.py`, only this repo's leftover servers), then `FASTMCP_PORT=$LOCAL_<NAME>_PORT python -m <package_name>.runtimes.<runtime_name>`. Runtime `local`, config from the files.
 - Every runtime has its own unusual local port (18731, 18732, ...), below the ephemeral range, so a listener there is almost surely ours. Deployed runtimes always use AgentCore's 8000 (MCP) and 8080 (HTTP).
 
 ### OP-3-4 Test it locally
 
 - Unit: layer 1 (OP-3-1).
 - Server: `tests/runtimes/test_runtimes_<runtime_name>.py`: the tool list, description = docstring, no injected parameter in the input schema, an output schema, one call per tool, `main()` with `mcp.run` stubbed.
-- By hand: `mise run ac-local-<slug>-call` lists the tools and calls one with the runtime's sample arguments, through the tested MCP client of OP-8-1 (new).
+- By hand: `mise run ac-local-<slug>-call` lists the tools and calls one with the runtime's sample arguments, through the tested MCP client `<package_name>/devtools/mcp_client.py` (OP-8-1 adds SigV4 to call a deployed one).
 
 ---
 
@@ -437,14 +437,14 @@ A change that breaks this design changes this file in the same change. A fact a 
 
 | # | Today | Design | OP |
 | :--- | :--- | :--- | :--- |
-| R1 | `runtimes/__init__.py` says the runtimes never import config or `one`; both do | the layer rule of section 2: layer 1 never does, layers 2 and 3 do | OP-3-2, OP-4-2 |
-| R2 | `FASTMCP_PORT`, `MCP_URL`, the default local MCP URL, the `bind()` ARN variable are literals in the modules (the URL twice). They are not runtime signals (OP-1 is done: its signals are in `constants.py`) | one documented constant each, in the module of the OP that owns it | OP-3-2, OP-4-2 |
-| R3 | SigV4, ARN to URL, MCP lookup order, startup print, `strip_thinking` sit in the agent module; the MCP server prints its banner inline | the shared module of OP-4-2; tag stripping as layer 1 of OP-4-1 | OP-4 |
+| R1 | done in OP-3: `runtimes/__init__.py` states the layer rule. Was: it said the runtimes never import config or `one`; both do | the layer rule of section 2: layer 1 never does, layers 2 and 3 do | OP-3-2, OP-4-2 |
+| R2 | `FASTMCP_PORT` done in OP-3 (`runtimes/common.py`). Left: `MCP_URL`, the default local MCP URL, the `bind()` ARN variable are literals in the modules (the URL twice). They are not runtime signals (OP-1 is done: its signals are in `constants.py`) | one documented constant each, in the module of the OP that owns it | OP-3-2, OP-4-2 |
+| R3 | the startup print moved to `runtimes/common.py` in OP-3. Left: SigV4, ARN to URL, MCP lookup order, `strip_thinking` sit in the agent module | the shared module of OP-4-2; tag stripping as layer 1 of OP-4-1 | OP-4 |
 | R4 | the prompt and the post-processing live in the runtime module | layer 1, no `strands` import | OP-4-1 |
 | R5 | the registry has name, module, protocol only; ports in `mise.toml [env]`, sample calls in scripts and `curl` | slug, port, sample call in the registry | OP-5-2 |
 | R6 | `ac-local-*`, `ac-dev-*`, the call tasks, `ac-invoke-dev-agent` are hand-written, with runtime names, module paths, `us-east-1`, and the dev profile inline | generated per runtime (and environment), region and profile from the environment | OP-9-4 |
-| R7 | the MCP call client is untested logic in `.mise/tasks/ac-local-mcp-call.py`; the agent call is `curl` | one tested client module; scripts are thin EPs | OP-8-1 |
-| R8 | `local_port.py` sits in `agentcore_project/` with the generated-project code | decide its home with the client module (both are dev tooling, not generated files) | OP-3-3 |
+| R7 | the MCP client is done in OP-3 (`devtools/mcp_client.py`, tested). Left: the agent call is `curl` | one tested client module; scripts are thin EPs | OP-8-1 |
+| R8 | done in OP-3: `local_port.py` and the MCP client are in `<package_name>/devtools/`, dev tooling never copied into a runtime | | OP-3-3 |
 | R9 | the AgentCore task generation is inside `cdk/mise_tasks.py` | its own module, called by `gen-env-tasks` | OP-6, OP-7 |
 | R10 | `ac-check-wheels` is run by path | a task | OP-5-3 |
 | R11 | nothing tests a deployed runtime; `ac-invoke-dev-agent` sends no session ID | `ac-invoke-<env>-<slug>` with `SESSION_ID`, `tests_int/test_agentcore_runtimes.py` | OP-6-4, OP-8 |
@@ -457,7 +457,7 @@ The references, one per OP, numbered `<OP><part>` so the file order is the OP or
 | `00-agentcore-docs-mcp.md` | every OP (a habit) | done | `01` |
 | `10-code-runtime.md` | OP-1 | done | `06` section 1 |
 | `20-centralized-config.md` | OP-2 | done | `06` section 3, `05` sections 1 and 2 |
-| `30-mcp-runtime.md` | OP-3 | to write | `09`, `10` |
+| `30-mcp-runtime.md` | OP-3 | done | `09` (deleted), `10` sections 2 and 3 |
 | `40-agent-runtime.md` | OP-4 | to write | `08`, `02` section 4.2, `10` |
 | `50-` to `53-` | OP-5, one per layer | to write | `03`, `07`, `04`, `10` |
 | `60-deploy.md` | OP-6 | to write | `07`, `11` sections 1 to 3 |

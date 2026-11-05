@@ -20,6 +20,7 @@ One reference per OP, numbered `<OP><part>`: `10` is OP-1, `30` and `31` would b
 - **AgentCore Docs Through MCP** (`references/00-agentcore-docs-mcp.md`): Read before answering any AgentCore question or relying on an AgentCore behavior, or when the AgentCore doc tools are missing.
 - **Code Runtime** (`references/10-code-runtime.md`): Read before writing code that behaves differently by where it runs, when a runtime is detected wrongly, or before adding a runtime kind.
 - **Centralized Config** (`references/20-centralized-config.md`): Read before adding or changing a config value or name a runtime uses, when a runtime cannot load its config, or before deploying or deleting the config of an environment.
+- **MCP Runtime** (`references/30-mcp-runtime.md`): Read before writing or changing an MCP tool, its business function or result model, or an MCP runtime module, or before running or calling an MCP server locally.
 - **Operation-Oriented Design of an AgentCore Project** (`references/99-ood.md`): Read before refactoring an AgentCore module, before moving a file between OPs, or when deciding which OP a new piece of AgentCore work belongs to.
 
 <!-- END references index -->
@@ -32,7 +33,7 @@ The references are being rewritten one OP at a time, in OP order. Until an OP ha
 | :--- | :--- | :--- |
 | OP-1 Code runtime | `10-code-runtime.md` | none |
 | OP-2 Centralized config | `20-centralized-config.md` | none |
-| OP-3 MCP runtime | not yet | `legacy/09-mcp-tools.md`, `legacy/10-local-dev.md`, `legacy/06-runtime-and-config.md` (section 5), `legacy/05-naming.md` (section 4) |
+| OP-3 MCP runtime | `30-mcp-runtime.md` | none |
 | OP-4 Agent runtime | not yet | `legacy/08-agent-to-mcp.md`, `legacy/10-local-dev.md`, `legacy/06-runtime-and-config.md` (sections 4 and 5), `legacy/05-naming.md` (sections 3 and 4) |
 | OP-5 AgentCore runtime | not yet | `legacy/03-project-layout.md`, `legacy/04-packaging.md`, `legacy/07-agentcore-vs-other-resources.md`, `legacy/10-local-dev.md`, `legacy/06-runtime-and-config.md` (section 2) |
 | OP-6 Deploy | not yet | `legacy/07-agentcore-vs-other-resources.md`, `legacy/11-deploy-and-troubleshoot.md` |

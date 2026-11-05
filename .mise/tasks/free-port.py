@@ -7,7 +7,7 @@ Free a local TCP port held by a leftover dev server of this project:
 
 import sys
 
-from cookiecutter_aws_agentcore_runtime_basic_demo.agentcore_project.local_port import (
+from cookiecutter_aws_agentcore_runtime_basic_demo.devtools.local_port import (
     main,
 )
 
