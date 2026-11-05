@@ -59,6 +59,10 @@ def test_names(config: Config):
     assert config.agentcore_runtime_physical_name_power_plant_mcp == "MyProject_dev_PowerPlantMcp"
     assert config.agentcore_runtime_name_site_agent == "SiteAgent"
     assert config.agentcore_runtime_physical_name_site_agent == "MyProject_dev_SiteAgent"
+    # urls of what is named at deploy time
+    assert config.get_agentcore_runtime_url("MyProject_dev_SiteAgent-abc") == "https://us-east-1.console.aws.amazon.com/bedrock-agentcore/agents/MyProject_dev_SiteAgent-abc"
+    assert config.get_iam_role_url("my-role") == "https://us-east-1.console.aws.amazon.com/iam/home?region=us-east-1#/roles/details/my-role"
+    assert config.get_cloudwatch_log_group_url("/aws/x-DEFAULT") == "https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#logsV2:log-groups/log-group/$252Faws$252Fx-DEFAULT"
     # fmt: on
 
 

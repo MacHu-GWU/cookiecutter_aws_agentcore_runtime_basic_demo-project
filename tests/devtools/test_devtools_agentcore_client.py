@@ -7,6 +7,9 @@ from cookiecutter_aws_agentcore_runtime_basic_demo.devtools.agentcore_client imp
     find_runtime_arn,
 )
 from cookiecutter_aws_agentcore_runtime_basic_demo.devtools.agentcore_client import (
+    find_deployed_runtimes,
+)
+from cookiecutter_aws_agentcore_runtime_basic_demo.devtools.agentcore_client import (
     get_runtime_id,
 )
 from cookiecutter_aws_agentcore_runtime_basic_demo.devtools.agentcore_client import (
@@ -91,6 +94,61 @@ def test_find_runtime_arn():
         stubber.add_response("list_agent_runtimes", {"agentRuntimes": []})
         with pytest.raises(ValueError, match="no deployed runtime"):
             find_runtime_arn(client, "MyProject_dev_Missing")
+
+
+def test_find_deployed_runtimes():
+    """One list pass; the role of each wanted runtime; the others left out."""
+    client = fake_session().client("bedrock-agentcore-control")
+    common = dict(
+        agentRuntimeVersion="1",
+        description="a runtime",
+        lastUpdatedAt="2026-01-01T00:00:00Z",
+        status="READY",
+    )
+    role_arn = "arn:aws:iam::111122223333:role/AgentCore-MyProject-dev-MyAgentRole-abc"
+    with Stubber(client) as stubber:
+        stubber.add_response(
+            "list_agent_runtimes",
+            {
+                "agentRuntimes": [
+                    {
+                        **common,
+                        "agentRuntimeName": "MyProject_dev_MyAgent",
+                        "agentRuntimeId": "MyProject_dev_MyAgent-abc",
+                        "agentRuntimeArn": ARN,
+                    },
+                    {
+                        **common,
+                        "agentRuntimeName": "Other_dev_Thing",
+                        "agentRuntimeId": "Other_dev_Thing-abc",
+                        "agentRuntimeArn": ARN + "x",
+                    },
+                ]
+            },
+        )
+        stubber.add_response(
+            "get_agent_runtime",
+            {
+                **common,
+                "agentRuntimeName": "MyProject_dev_MyAgent",
+                "agentRuntimeId": "MyProject_dev_MyAgent-abc",
+                "agentRuntimeArn": ARN,
+                "createdAt": "2026-01-01T00:00:00Z",
+                "roleArn": role_arn,
+                "lifecycleConfiguration": {
+                    "idleRuntimeSessionTimeout": 900,
+                    "maxLifetime": 28800,
+                },
+            },
+            {"agentRuntimeId": "MyProject_dev_MyAgent-abc"},
+        )
+        found = find_deployed_runtimes(
+            client, ["MyProject_dev_MyAgent", "MyProject_dev_Missing"]
+        )
+    assert list(found) == ["MyProject_dev_MyAgent"]
+    runtime = found["MyProject_dev_MyAgent"]
+    assert runtime.runtime_id == "MyProject_dev_MyAgent-abc"
+    assert runtime.role_name == "AgentCore-MyProject-dev-MyAgentRole-abc"
 
 
 def test_log_group():

@@ -15,4 +15,5 @@ sub packages and modules
     local_port <local_port>
     local_run <local_run>
     mcp_client <mcp_client>
+    quick_links <quick_links>
     

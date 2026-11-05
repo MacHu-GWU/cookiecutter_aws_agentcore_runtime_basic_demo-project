@@ -31,6 +31,7 @@ class PathEnum:
     path_license = dir_project_root / "LICENSE.txt"
     path_release_history = dir_project_root / "release-history.rst"
     path_mise_toml = dir_project_root / "mise.toml"
+    path_quick_links_md = dir_project_root / "QUICK_LINKS.md"
 
     # Config files, see Config.load_from_local_config_file
     dir_config = dir_project_root / "config"

@@ -92,6 +92,10 @@ mise run ac-test-<env>
 
 ---
 
+After a deploy that creates or replaces a runtime, `mise run gen-quick-links` refreshes the console links of `QUICK_LINKS.md` (it reads AWS).
+
+---
+
 ## 6. The generated tasks
 
 `mise run gen-env-tasks` rewrites the `<env-tasks>` block of `mise.toml`; never edit it by hand. `<package_name>/agentcore_project/mise_tasks.py` renders the AgentCore part of each environment (`config-*`, `ac-deploy`, `ac-down`, `ac-status`, `ac-invoke-*`, the `ac-chain-*` and `ac-test` chains), and passes it to `render_env_tasks_block` of `<package_name>/cdk/mise_tasks.py`, which adds the `cdk-*` tasks and knows nothing of AgentCore.

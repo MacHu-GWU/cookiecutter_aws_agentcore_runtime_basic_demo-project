@@ -14,6 +14,7 @@ from __future__ import annotations
 import typing as T
 import json
 import uuid
+import dataclasses
 
 from ..runtimes.mcp_connection import AwsSigV4Auth
 from ..runtimes.mcp_connection import get_arn_region
@@ -62,6 +63,55 @@ def find_runtime_arn(
             if runtime["agentRuntimeName"] == physical_name:
                 return runtime["agentRuntimeArn"]
     raise ValueError(f"no deployed runtime named {physical_name!r}")
+
+
+@dataclasses.dataclass(frozen=True)
+class DeployedRuntime:
+    """
+    What AWS assigned to a deployed runtime at deploy time.
+    """
+
+    # fmt: off
+    physical_name: str = dataclasses.field()  #: Its name in AWS, ``agentcore_runtime_physical_name_<x>``.
+    runtime_id: str = dataclasses.field()  #: The physical name plus a suffix, such as ``MyProject_dev_MyMcp-abc``.
+    runtime_arn: str = dataclasses.field()  #: Its ARN.
+    role_arn: str = dataclasses.field()  #: The ARN of its execution role, which the AgentCore CLI created.
+    # fmt: on
+
+    @property
+    def role_name(self) -> str:
+        """
+        The name of the execution role, the last part of its ARN.
+        """
+        return self.role_arn.split("/")[-1]
+
+
+def find_deployed_runtimes(
+    control_client: BedrockAgentCoreControlClient,
+    physical_names: list[str],
+) -> dict[str, DeployedRuntime]:
+    """
+    The deployed runtimes among ``physical_names``, by physical name; a name
+    that is not deployed is left out. One ``ListAgentRuntimes`` pass, then one
+    ``GetAgentRuntime`` per runtime found, for its execution role.
+    """
+    wanted = set(physical_names)
+    found = {}
+    paginator = control_client.get_paginator("list_agent_runtimes")
+    for page in paginator.paginate():
+        for runtime in page["agentRuntimes"]:
+            name = runtime["agentRuntimeName"]
+            if name in wanted:
+                details = control_client.get_agent_runtime(
+                    agentRuntimeId=runtime["agentRuntimeId"]
+                )
+                found[name] = DeployedRuntime(
+                    physical_name=name,
+                    runtime_id=runtime["agentRuntimeId"],
+                    runtime_arn=runtime["agentRuntimeArn"],
+                    role_arn=details["roleArn"],
+                )
+    return found
 
 
 def get_runtime_id(runtime_arn: str) -> str:

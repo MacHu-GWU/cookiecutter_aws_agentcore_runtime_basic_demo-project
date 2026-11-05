@@ -60,7 +60,7 @@ The empty project still synthesizes because `cdk-stack.ts` calls `bind()` only `
 ## 4. Afterwards
 
 - `mise run ac-status-<env>` should show nothing deployed for the target.
-- Commit the changed `agentcore/.cli/deployed-state.json`.
+- Commit the changed `agentcore/.cli/deployed-state.json`, and refresh `QUICK_LINKS.md` with `mise run gen-quick-links`.
 - What neither stack owns is not removed by the chain, such as the CDK bootstrap stack `CDKToolkit`, and anything the runtimes created at run time. Check the runtimes' log groups (read-only) with `aws logs describe-log-groups --log-group-name-prefix /aws/bedrock-agentcore/runtimes/<physical name>`, and delete them yourself if they should go.
 - To come back: `mise run ac-chain-up-<env>` (`60-deploy.md`).
 

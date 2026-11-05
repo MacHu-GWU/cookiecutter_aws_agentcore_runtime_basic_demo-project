@@ -188,6 +188,15 @@ class ConfigNameMixin:
         """
         return f"arn:aws:iam::{self.aws_account_id}:role/{self.iam_role_name_publisher}"
 
+    def get_iam_role_url(self: Config, role_name: str) -> str:
+        """
+        The console URL of an IAM role, given its name.
+        """
+        return (
+            f"https://{self.aws_region}.console.aws.amazon.com/iam/home"
+            f"?region={self.aws_region}#/roles/details/{role_name}"
+        )
+
     # --------------------------------------------------------------------------
     # IAM policies
     # --------------------------------------------------------------------------
@@ -218,6 +227,20 @@ class ConfigNameMixin:
         """
         quoted_arn = urllib.parse.quote(self.iam_policy_arn_agentcore_runtime, safe="")
         return f"https://us-east-1.console.aws.amazon.com/iam/home#/policies/details/{quoted_arn}"
+
+    # --------------------------------------------------------------------------
+    # CloudWatch log groups
+    # --------------------------------------------------------------------------
+    def get_cloudwatch_log_group_url(self: Config, log_group_name: str) -> str:
+        """
+        The console URL of a CloudWatch log group, given its name.
+        """
+        # the console escapes "/" in the log group name as "$252F"
+        name = log_group_name.replace("/", "$252F")
+        return (
+            f"https://{self.aws_region}.console.aws.amazon.com/cloudwatch/home"
+            f"?region={self.aws_region}#logsV2:log-groups/log-group/{name}"
+        )
 
     # --------------------------------------------------------------------------
     # SSM parameters
@@ -329,6 +352,17 @@ class ConfigNameMixin:
                 "shorten agentcore_project_name or the runtime name"
             )
         return physical_name
+
+    def get_agentcore_runtime_url(self: Config, runtime_id: str) -> str:
+        """
+        The AgentCore console URL of a deployed runtime, given its ID, such as
+        ``MyProject_dev_PowerPlantMcp-abc``: the physical name plus a suffix
+        AWS assigns at deploy time, so it is looked up, never built.
+        """
+        return (
+            f"https://{self.aws_region}.console.aws.amazon.com"
+            f"/bedrock-agentcore/agents/{runtime_id}"
+        )
 
     @cached_property
     def agentcore_runtime_name_power_plant_mcp(self: Config) -> str:

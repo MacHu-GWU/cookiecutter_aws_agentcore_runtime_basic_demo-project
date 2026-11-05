@@ -160,6 +160,11 @@ description = "🧩 Regenerate the config-<deploy|delete>-<env|all>, ac-deploy-<
 run = ".venv/bin/python .mise/tasks/gen-env-tasks.py"
 depends = ["inst"]
 
+[tasks.gen-quick-links]
+description = "🔗 Regenerate QUICK_LINKS.md, the console of every AWS resource in every environment: stacks and config from config/, runtimes, their roles and logs looked up in AWS (read only) with each environment's profile"
+run = ".venv/bin/python .mise/tasks/gen-quick-links.py"
+depends = ["inst"]
+
 [tasks.print-cdk-stack-urls]
 description = "🔗 Print the CloudFormation console URL of every stack in every environment (no AWS call; a failing environment prints an error, the rest still print)"
 run = ".venv/bin/python .mise/tasks/print-cdk-stack-urls.py"

@@ -1,5 +1,5 @@
 ---
-description: "OP-8 Invoke and Observe: calling the deployed runtimes from a client program (find the runtime ARN, InvokeAgentRuntime for an agent, MCP over SigV4), runtime sessions and how they map to microVMs, where the time of one invocation goes (cold vs warm) and how to keep it warm, the logs of a runtime and how to read them, the integration tests against a deployed environment, and the invocation failures met so far. Read before writing a client that calls a deployed runtime, when an invocation is slow or fails, or to read a runtime's logs."
+description: "OP-8 Invoke and Observe: calling the deployed runtimes from a client program (find the runtime ARN, InvokeAgentRuntime for an agent, MCP over SigV4), runtime sessions and how they map to microVMs, where the time of one invocation goes (cold vs warm) and how to keep it warm, the logs of a runtime and how to read them, QUICK_LINKS.md with the console of every resource, the integration tests against a deployed environment, and the invocation failures met so far. Read before writing a client that calls a deployed runtime, when an invocation is slow or fails, or to read a runtime's logs."
 ---
 
 # Invoke and Observe
@@ -9,8 +9,8 @@ Implements **OP-8**. The quick checks after a deploy are the generated `ac-statu
 | | |
 | :--- | :--- |
 | EP | `<package_name>/devtools/agentcore_client.py` |
-| FP | `<package_name>/devtools/agentcore_client.py`, `<package_name>/devtools/mcp_client.py` (its `auth`), the AgentCore clients of `<package_name>/one/one_02_boto_ses.py`, the `ac-logs` step of `<package_name>/agentcore_project/mise_tasks.py`, `tests_int/test_agentcore_runtimes.py`, `tests/devtools/test_devtools_agentcore_client.py` |
-| CMD | `mise run int-test` (needs a deploy; calls the model); `mise run ac-logs-<env>-<slug>`; `mise run ac-invoke-<env>-<slug>`; unit tests below |
+| FP | `<package_name>/devtools/agentcore_client.py`, `<package_name>/devtools/mcp_client.py` (its `auth`), `<package_name>/devtools/quick_links.py`, `.mise/tasks/gen-quick-links.py`, `QUICK_LINKS.md`, the console URL helpers of `config_01_name.py`, the AgentCore clients of `<package_name>/one/one_02_boto_ses.py`, the `ac-logs` step of `<package_name>/agentcore_project/mise_tasks.py`, `tests_int/test_agentcore_runtimes.py`, `tests/devtools/test_devtools_agentcore_client.py` |
+| CMD | `mise run int-test` (needs a deploy; calls the model); `mise run gen-quick-links` (reads AWS); `mise run ac-logs-<env>-<slug>`; `mise run ac-invoke-<env>-<slug>`; unit tests below |
 
 ---
 
@@ -107,6 +107,21 @@ SINCE=2h mise run ac-logs-<env>-<slug>
 The task runs `agentcore logs runtime --name <Runtime> --target <env> --since ${SINCE:-30m}`; the CLI also takes `--tail`, `--level`, `--query`. The runtime ID is known only after a deploy: `ac-status-<env>`, the stack's console URL, or `aws logs describe-log-groups --log-group-name-prefix /aws/bedrock-agentcore/runtimes/<physical name>`.
 
 To read where the time went: process start (T2), request received, first MCP response (T3), answer returned (T4). A long gap before the first MCP response is a cold MCP microVM.
+
+### 4.1 `QUICK_LINKS.md`: the console of every resource
+
+```bash
+mise run gen-quick-links
+```
+
+`<package_name>/devtools/quick_links.py` (through the thin `.mise/tasks/gen-quick-links.py`) writes `QUICK_LINKS.md` at the repo root, one table per environment, only when it changed:
+
+| Rows | Built from |
+| :--- | :--- |
+| every CDK stack, the AgentCore stack, the config parameter | the local config files, no AWS call |
+| per runtime: its console page (`get_agentcore_runtime_url`), its execution role (`get_iam_role_url`), its log group (`get_cloudwatch_log_group_url`) | AWS, read only, with the environment's profile: `find_deployed_runtimes` of `agentcore_client.py` (`ListAgentRuntimes`, then `GetAgentRuntime` for the role) |
+
+A runtime that is not deployed is one row saying so; an environment whose runtimes cannot be read (no profile, no access) says `not read (<error type>)`; an environment whose config does not load gets an error line. The file is committed, so it holds no account ID and no error message (both may be private): every link is built from a name or an ID. Run it again after a deploy or a teardown, since a redeploy can change a runtime's ID and role.
 
 ---
 

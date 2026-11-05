@@ -367,8 +367,8 @@ The CLI's own teardown: `agentcore deploy --yes` of a project that declares noth
 Call the deployed runtimes from a client program, keep the conversation and the microVMs warm, and find out what happened.
 
 - EP: `<package_name>/devtools/agentcore_client.py`: find a runtime's ARN, `InvokeAgentRuntime` with a session ID, the SigV4 connection of a deployed MCP runtime (used with `devtools/mcp_client.py`), the log group
-- FP: `<package_name>/devtools/{agentcore_client,mcp_client}.py`, the AgentCore clients of `one/one_02_boto_ses.py`, the `ac-logs` step of `agentcore_project/mise_tasks.py`, `tests_int/test_agentcore_runtimes.py`
-- CMD: `mise run int-test` (needs a deploy), `mise run ac-logs-<env>-<slug>`, `mise run ac-invoke-<env>-<slug>`
+- FP: `<package_name>/devtools/{agentcore_client,mcp_client,quick_links}.py`, the AgentCore clients of `one/one_02_boto_ses.py`, the console URL helpers of `config_01_name.py`, the `ac-logs` step of `agentcore_project/mise_tasks.py`, `QUICK_LINKS.md`, `tests_int/test_agentcore_runtimes.py`
+- CMD: `mise run int-test` (needs a deploy), `mise run gen-quick-links` (reads AWS), `mise run ac-logs-<env>-<slug>`, `mise run ac-invoke-<env>-<slug>`
 - Docs: `80-invoke-and-observe.md`
 
 ### OP-8-1 Call a runtime from a client

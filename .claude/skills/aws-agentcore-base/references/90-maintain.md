@@ -86,7 +86,7 @@ The registry (`51-agentcore-config.md`) is the one place a runtime is declared, 
 | **Add an environment** | a member of `EnvNameEnum` (`pywf-aws-cdk-base`), its `config/config-<env>.json5` and secret file, `AWS_PROFILE_FOR_<ENV>` in `.env`; `gen-env-tasks`; then `ac-chain-up-<env>` with the user's yes |
 | **Remove an environment** | `ac-chain-down-<env>` first (the user's yes), then the reverse of adding it |
 
-The tests catch most misses: names and physical-name length in every environment (`20-centralized-config.md`), unique local ports and every `mcp_runtimes` entry bound in `cdk-stack.ts` (`test_agentcore_project_registry.py`), every runtime module's entry points, and `mise.toml` being up to date.
+After any of these and a deploy, `mise run gen-quick-links` refreshes `QUICK_LINKS.md` (`80-invoke-and-observe.md`, section 4.1). The tests catch most misses: names and physical-name length in every environment (`20-centralized-config.md`), unique local ports and every `mcp_runtimes` entry bound in `cdk-stack.ts` (`test_agentcore_project_registry.py`), every runtime module's entry points, and `mise.toml` being up to date.
 
 ---
 
